@@ -1,4 +1,5 @@
-CC_HOST      = gcc
+UPMEM_HOME   = /usr
+C_HOST      = gcc
 CFLAGS_HOST  = -O3 -Wall -Iinclude -I$(UPMEM_HOME)/include
 LDFLAGS_HOST = -L$(UPMEM_HOME)/lib -lupmem -Wl,-rpath,$(UPMEM_HOME)/lib
 
