@@ -2,7 +2,6 @@ UPMEM_DIRS   = /usr/include/dpu
 
 CC_HOST      = gcc
 CFLAGS_HOST  = -O3 -Wall -Iinclude $(addprefix -I, $(UPMEM_DIRS))
-LDFLAGS_HOST = -L/usr/lib -lupmem -Wl,-rpath,/usr/lib
 
 CC_DPU       = dpu-upmem-dpurte-clang
 CFLAGS_DPU   = -O2 -Iinclude
