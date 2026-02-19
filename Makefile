@@ -1,7 +1,8 @@
-UPMEM_HOME   = /usr
-C_HOST      = gcc
-CFLAGS_HOST  = -O3 -Wall -Iinclude -I$(UPMEM_HOME)/include
-LDFLAGS_HOST = -L$(UPMEM_HOME)/lib -lupmem -Wl,-rpath,$(UPMEM_HOME)/lib
+UPMEM_DIRS   = /usr/include/dpu
+
+CC_HOST      = gcc
+CFLAGS_HOST  = -O3 -Wall -Iinclude $(addprefix -I, $(UPMEM_DIRS))
+LDFLAGS_HOST = -L/usr/lib -lupmem -Wl,-rpath,/usr/lib
 
 CC_DPU       = dpu-upmem-dpurte-clang
 CFLAGS_DPU   = -O2 -Iinclude
@@ -39,10 +40,10 @@ $(HOST_TARGET): $(HOST_OBJS)
 $(DPU_TARGET): $(DPU_OBJS)
 	$(CC_DPU) -o $@ $^ $(CFLAGS_DPU)
 
-run: $(HOST_TARGET) $(DPU_TARGET)
-	./$(HOST_TARGET)
-
 clean:
 	rm -rf $(BUILD_DIR)
 
-.PHONY: all clean
+run: $(HOST_TARGET) $(DPU_TARGET)
+	./$(HOST_TARGET)
+
+.PHONY: all clean run
