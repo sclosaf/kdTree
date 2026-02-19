@@ -38,6 +38,9 @@ $(HOST_TARGET): $(HOST_OBJS)
 $(DPU_TARGET): $(DPU_OBJS)
 	$(CC_DPU) -o $@ $^ $(CFLAGS_DPU)
 
+run: $(HOST_TARGET) $(DPU_TARGET)
+	./$(HOST_TARGET)
+
 clean:
 	rm -rf $(BUILD_DIR)
 
