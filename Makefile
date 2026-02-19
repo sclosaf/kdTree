@@ -2,6 +2,7 @@ UPMEM_DIRS   = /usr/include/dpu
 
 CC_HOST      = gcc
 CFLAGS_HOST  = -O3 -Wall -Iinclude $(addprefix -I, $(UPMEM_DIRS))
+LDFLAGS_HOST = -ldpu
 
 CC_DPU       = dpu-upmem-dpurte-clang
 CFLAGS_DPU   = -O2 -Iinclude
@@ -37,7 +38,7 @@ $(HOST_TARGET): $(HOST_OBJS)
 	$(CC_HOST) -o $@ $^ $(LDFLAGS_HOST)
 
 $(DPU_TARGET): $(DPU_OBJS)
-	$(CC_DPU) -o $@ $^ $(CFLAGS_DPU)
+	$(CC_DPU) -o $@ $^
 
 clean:
 	rm -rf $(BUILD_DIR)
