@@ -1,5 +1,5 @@
-#ifndef RENAME_H
-#define RENAME_H
+#ifndef TYPES
+#define TYPES_H
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -13,5 +13,8 @@ typedef int64_t i64;
 
 typedef float  f32;
 typedef double f64;
+
+typedef dpu_set_t DSet;
+typedef dpu_xfer_flags_t DpuXferFlags;
 
 #endif

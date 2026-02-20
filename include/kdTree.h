@@ -1,7 +1,7 @@
 #ifndef KDTREE_H
 #define KDTREE_H
 
-#include "rename.h"
+#include "types.h"
 #include "constants.h"
 
 typedef struct
