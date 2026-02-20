@@ -1,12 +1,21 @@
 #ifndef KDTREE_H
 #define KDTREE_H
 
-// IDs?
+#include "rename.h"
+#include "constants.h"
 
 typedef struct
 {
-    f32 coords[];
+    f32 coords[DIM];
 } point;
+
+typedef struct
+{
+    u32 value;
+    u32 totalTreeSize;
+    f32 beta;
+    u32 lastUpdate;
+} approxCounter;
 
 typedef struct
 {
@@ -23,26 +32,22 @@ typedef struct
     i8 splitDim;
     i8 splitValue;
 
-    struct KDNode* left;
-    struct KDNode* right;
     struct KDNode* parent;
-
     struct approxCounter size;
+
+    union
+    {
+        struct
+        {
+            struct KDNode* left;
+            struct KDNode* right;
+        } internal;
+        struct
+        {
+            struct point** points;
+            u32 pointCount;
+        } leaf;
+    } data;
 } KDNode;
-
-typedef struct
-{
-    point** points;
-    u32 pointCount;
-
-    struct KDNode* parent;
-} KDLeaf;
-
-typedef struct {
-    u32 value;
-    u32 totalTreeSize;
-    f32 beta;
-    u32 lastUpdate;
-} approxCounter;
 
 #endif
