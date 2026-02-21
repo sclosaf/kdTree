@@ -102,7 +102,7 @@ int dpuTransferDataFromDpu(DPUContext* ctx, u32 dpuId, void* data, size_t size, 
     if(!ctx || dpuId>= ctx->nDpus)
         return -1;
 
-    struct dSet dpu;
+    struct dpu_set_t dpu;
     u32 currentId= 0;
 
     DPU_FOREACH(ctx->set, dpu)
