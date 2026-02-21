@@ -29,7 +29,7 @@ int dpuLaunchSpecificDpu(DPUContext* ctx, u32 dpuId, const char* path, DPUKernel
     if(!ctx || dpuId >= ctx->nDpus)
         return -1;
 
-    struct DSet dpu;
+    struct dpu_set_t dpu;
     u32 currentId = 0;
     bool found = 0;
 
@@ -75,7 +75,7 @@ int dpuLaunchAllDpus(DPUContext* ctx, const char* path, DPUKernelArgs* args)
     return 0;
 }
 
-int dpuTransferDataToDpu(DPUContext* ctx, u32 dpuId, const void* data, size_t size, DpuXferFlags flags)
+int dpuTransferDataToDpu(DPUContext* ctx, u32 dpuId, const void* data, size_t size, dpu_xfer_flags_t flags)
 {
     if(!ctx || dpuId >= ctx->nDpus)
         return -1;
@@ -97,7 +97,7 @@ int dpuTransferDataToDpu(DPUContext* ctx, u32 dpuId, const void* data, size_t si
     return -1;
 }
 
-int dpuTransferDataFromDpu(DPUContext* ctx, u32 dpuId, void* data, size_t size, DpuXferFlags flags)
+int dpuTransferDataFromDpu(DPUContext* ctx, u32 dpuId, void* data, size_t size, dpu_xfer_flags_t flags)
 {
     if(!ctx || dpuId>= ctx->nDpus)
         return -1;
