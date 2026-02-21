@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <dpu.h>
 
 #include "types.h"
