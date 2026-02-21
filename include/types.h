@@ -1,7 +1,7 @@
 #ifndef TYPES
 #define TYPES_H
 
-#include <dpu.h>
+#include <dpu_types.h>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
