@@ -1,6 +1,6 @@
 HOST_INCLUDE_DIRS = /usr/include /usr/include/dpu
 
-DPU_INCLUDE_DIRS = /usr/include/dpu /usr/share/upmem/include/
+DPU_INCLUDE_DIRS = /usr/include /usr/include/dpu /usr/share/upmem/include/
 
 CC_HOST      = gcc
 CFLAGS_HOST  = -O3 -Wall -Iinclude $(addprefix -I, $(HOST_INCLUDE_DIRS))
