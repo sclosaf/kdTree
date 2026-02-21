@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <dpu.h>
-
 #include "types.h"
 
 __host u32 input[1024];
