@@ -25,7 +25,6 @@ typedef struct
 DPUContext* dpuInitContext(u32 nDpus);
 void dpuCleanupContext(DPUContext* ctx);
 
-int dpuLaunchKernel(DPUContext* ctx, const char* program_path, DPUKernelArgs* args);
 int dpuLaunchSpecificDpu(DPUContext* ctx, u32 dpuId, const char* path, DPUKernelArgs* args);
 int dpuLaunchAllDpus(DPUContext* ctx, const char* path, DPUKernelArgs* args);
 
