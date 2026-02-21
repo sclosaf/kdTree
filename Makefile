@@ -1,6 +1,6 @@
 HOST_INCLUDE_DIRS = /usr/include /usr/include/dpu
 
-DPU_INCLUDE_DIRS = /usr/include /usr/include/dpu
+DPU_INCLUDE_DIRS = /usr/include /usr/include/dpu /usr/include/x86_64-linux-gnu
 
 CC_HOST      = gcc
 CFLAGS_HOST  = -O3 -Wall -Iinclude $(addprefix -I, $(HOST_INCLUDE_DIRS))
