@@ -1,4 +1,6 @@
-UPMEM_DIRS   = /usr/include  /usr/include/dpu
+UPMEM_DIRS   = /usr/include  \
+			   /usr/include/dpu \
+			   /usr/include/x86_64-linux-gnu/bits/
 
 CC_HOST      = gcc
 CFLAGS_HOST  = -O3 -Wall -Iinclude $(addprefix -I, $(UPMEM_DIRS))
