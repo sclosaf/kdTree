@@ -9,8 +9,8 @@ DPUContext* dpuInitContext(u32 nDpus)
     DPU_ASSERT(dpu_alloc(nDpus, NULL, &ctx->set));
     DPU_ASSERT(dpu_get_nr_dpus(ctx->set, &ctx->nDpus));
 
-    DPU_ASSERT(dpu_get_nr_ranks(ctx->dpu_set, &ctx->nRanks));
-    ctx->current_dpu_id = 0;
+    DPU_ASSERT(dpu_get_nr_ranks(ctx->set, &ctx->nRanks));
+    ctx->currentDpuId = 0;
 
     return ctx;
 }

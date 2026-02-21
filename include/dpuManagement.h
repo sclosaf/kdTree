@@ -6,7 +6,7 @@
 
 typedef struct
 {
-    struct DSet set;
+    struct dpu_set_t set;
     u32 nDpus;
     u32 nRanks;
     u32 currentDpuId;
@@ -28,7 +28,7 @@ void dpuCleanupContext(DPUContext* ctx);
 int dpuLaunchSpecificDpu(DPUContext* ctx, u32 dpuId, const char* path, DPUKernelArgs* args);
 int dpuLaunchAllDpus(DPUContext* ctx, const char* path, DPUKernelArgs* args);
 
-int dpuTransferDataToDpu(DPUContext* ctx, u32 dpuId, const void* data, size_t size, DpuXferFlags flags);
-int dpuTransferDataFromDpu(DPUContext* ctx, u32 dpuId, void* data, size_t size, DpuXferFlags flags);
+int dpuTransferDataToDpu(DPUContext* ctx, u32 dpuId, const void* data, size_t size, dpu_xfer_flags_t flags);
+int dpuTransferDataFromDpu(DPUContext* ctx, u32 dpuId, void* data, size_t size, dpu_xfer_flags_t flags);
 
 #endif
