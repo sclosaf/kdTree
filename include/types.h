@@ -1,9 +1,6 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <dpu.h>
-#include <dpu_types.h>
-
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
@@ -16,8 +13,5 @@ typedef int64_t i64;
 
 typedef float  f32;
 typedef double f64;
-
-typedef dpu_set_t DSet;
-typedef dpu_xfer_flags_t DpuXferFlags;
 
 #endif
