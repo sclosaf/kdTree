@@ -1,4 +1,4 @@
-#ifndef TYPES
+#ifndef TYPES_H
 #define TYPES_H
 
 #include <dpu.h>
