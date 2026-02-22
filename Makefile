@@ -1,15 +1,13 @@
-INCLUDE_DIRS = $(wildcard include/*/)
-
 HOST_INCLUDE_DIRS = /usr/include /usr/include/dpu
 
 DPU_INCLUDE_DIRS =
 
 CC_HOST      = gcc
-CFLAGS_HOST  = -O3 -Wall $(addprefix -I, $(INCLUDE_DIRS)) $(addprefix -I, $(HOST_INCLUDE_DIRS))
+CFLAGS_HOST  = -O3 -Wall -Iinclude $(addprefix -I, $(HOST_INCLUDE_DIRS))
 LDFLAGS_HOST = -ldpu
 
 CC_DPU       = dpu-upmem-dpurte-clang
-CFLAGS_DPU   = -O2 $(addprefix -I, $(INCLUDE_DIRS)) $(addprefix -I, $(DPU_INCLUDE_DIRS))
+CFLAGS_DPU   = -O2 -Iinclude $(addprefix -I, $(DPU_INCLUDE_DIRS))
 
 TARGET_HOST  = main
 DPU_PROGRAM  = dpuMain

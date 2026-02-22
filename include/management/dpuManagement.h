@@ -2,7 +2,7 @@
 #define DPUMANAGEMENT_H
 
 #include <dpu.h>
-#include "types.h"
+#include "utils/types.h"
 
 typedef struct
 {
