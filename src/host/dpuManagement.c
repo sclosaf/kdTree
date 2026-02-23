@@ -1,4 +1,4 @@
-#include "host/dpuManagement.h"
+#include "management/dpuManagement.h"
 
 DPUContext* dpuInitContext(u32 nDpus)
 {
