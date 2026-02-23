@@ -75,7 +75,7 @@ int dpuLaunchAllDpus(DPUContext* ctx, const char* path, DPUKernelArgs* args)
     return 0;
 }
 
-int dpuTransferDataToDpu(DPUContext* ctx, u32 dpuId, const void* data, size_t size, dpu_xfer_flags_t flags)
+int dpuTransferDataToDpu(DPUContext* ctx, u32 dpuId, void* data, size_t size, dpu_xfer_flags_t flags)
 {
     if(!ctx || dpuId >= ctx->nDpus)
         return -1;
