@@ -164,7 +164,7 @@ static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int 
         (*root)->type = LEAF;
         (*root)->parent = NULL;
         (*root)->data.leaf.points = NULL;
-        (*root)->data.leaf.pointCount = 0;
+        (*root)->data.leaf.pointsCount = 0;
 
         return;
     }
