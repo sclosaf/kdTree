@@ -5,7 +5,7 @@
 
 typedef struct Bucket
 {
-    point* bucket;
+    point** bucket;
     size_t size;
 } Bucket;
 

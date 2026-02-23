@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <math.h>
+#include <string.h>
 #include <omp.h>
 
 #include "kdTree/kdTree.h"
@@ -174,8 +176,9 @@ static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int 
     int splitDim = findSplitDim(samples, 0, sampleCount - 1);
     f32 splitValue = findMedian(samples, 0, sampleCount - 1, splitDim);
 
-    (*root)->splitDim = splitDim;
-    (*root)->splitValue = splitValue;
+    (*root)->type = INTERNAL;
+    (*root)->data.internal.splitDim = splitDim;
+    (*root)->data.internal.splitValue = splitValue;
     (*root)->parent = NULL;
 
     size_t leftCount = 0;
@@ -213,7 +216,7 @@ static u32 getBucket(KDNode* sketch, point* p)
     while(current && level < SKETCH_HEIGHT && current->type != LEAF)
     {
         id <<= 1;
-        if(p->coords[current->splitDim] >= current->splitValue)
+        if(p->coords[current->data.internal.splitDim] >= current->data.internal.splitValue)
         {
             id |= 1;
             current = current->data.internal.right;
@@ -243,9 +246,10 @@ static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, 
     int splitDim = findSplitDim(points, start, end);
     f32 splitValue = findMedian(points, start, end, splitDim);
 
-    node->splitDim = splitDim;
-    node->splitValue = splitValue;
+    node->type = INTERNAL;
     node->parent = NULL;
+    node->data.internal.splitDim = splitDim;
+    node->data.internal.splitValue = splitValue;
 
     size_t mid = parallelPartition(points, start, end, splitDim, splitValue);
 
@@ -355,9 +359,15 @@ static KDNode* createLeafNode(point** points, size_t size)
     if(!leaf)
         return NULL;
 
-    leaf->data.leaf.points = (point**)malloc(size * sizeof(point*));
-    memcpy(leaf->data.leaf.points, points, size * sizeof(point*));
-    leaf->data.leaf.pointCount = size;
+    leaf->type = LEAF;
+    leaf->parent = NULL;
+
+    leaf->data.leaf.points = (point*)malloc(size * sizeof(point));
+
+    for(size_t i = 0; i < size; ++i)
+        leaf->data.leaf.points[i] = *points[i];
+
+    leaf->data.leaf.pointsCount = size;
 
     return leaf;
 }
