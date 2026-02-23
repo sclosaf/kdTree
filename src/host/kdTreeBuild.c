@@ -7,16 +7,15 @@
 #include "utils/types.h"
 
 static KDNode* buildTreeParallel(point** points, size_t size, int depth);
-static BucketArray* sievePoints(point** points, size_t size, KDNode* sketch);
+static Bucket* sievePoints(point** points, size_t size, KDNode* sketch);
 static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int level);
 static u32 getBucket(KDNode* sketch, point* p);
 static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, int depth);
 static f32 findMedian(point** points, size_t start, size_t end, int dim);
 static int findSplitDim(point** points, size_t start, size_t end);
 static size_t parallelPartition(point** points, size_t start, size_t end, int dim, f32 pivot);
-static BucketArray* createBucketArray(int numBuckets);
 static KDNode* createLeafNode(point** points, size_t size);
-static void freeLeafNode(KDNode* node)
+static void freeLeafNode(KDNode* node);
 static void attachSubtree(KDNode* sketch, int bucketId, KDNode* subtree);
 static int compareByDim(const void* a, const void* b, void* dim);
 static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols);
