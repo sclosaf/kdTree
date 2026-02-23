@@ -9,16 +9,14 @@
 static KDNode* buildTreeParallel(point** points, size_t size, int depth);
 static BucketArray* sievePoints(point** points, size_t size, KDNode* sketch);
 static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int level);
-static u32 get_bucket_id(KDNode* sketch, point* p);
+static u32 getBucket(KDNode* sketch, point* p);
 static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, int depth);
 static f32 findMedian(point** points, size_t start, size_t end, int dim);
 static int findSplitDim(point** points, size_t start, size_t end);
 static size_t parallelPartition(point** points, size_t start, size_t end, int dim, f32 pivot);
 static BucketArray* createBucketArray(int numBuckets);
-static void freeBucketArray(BucketArray* ba);
 static KDNode* createLeafNode(point** points, size_t size);
-static inline bool isLeaf(KDNode* node);
-static void attachSubtree(KDNode* sketch, int bucket_id, KDNode* subtree);
+static void attachSubtree(KDNode* sketch, int bucketId, KDNode* subtree);
 static int compareByDim(const void* a, const void* b, void* dim);
 static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols);
 
@@ -56,7 +54,7 @@ static KDNode* buildTreeParallel(point** points, size_t size, int depth)
     point** samples = (point**)malloc(sampleCount * sizeof(point*));
 
     #pragma omp parallel for
-    for(size_t i = 0; i < sampleCount; i++)
+    for(size_t i = 0; i < sampleCount; ++i)
     {
         int index = rand() % size;
         samples[i] = points[index];
@@ -66,94 +64,92 @@ static KDNode* buildTreeParallel(point** points, size_t size, int depth)
     buildSketch(&sketch, samples, sampleCount, SKETCH_HEIGHT);
     free(samples);
 
-    BucketArray* buckets = sievePoints(points, size, sketch);
+    Bucket* buckets = sievePoints(points, size, sketch);
 
-    // Recursively build subtrees in parallel
     #pragma omp parallel for
-    for(int i = 0; i < (1 << SKETCH_HEIGHT); i++) {
-        if(buckets->sizes[i] > 0) {
-            KDNode* subtree = buildTreeParallel(buckets->points[i],
-                                               buckets->sizes[i],
-                                               depth + SKETCH_HEIGHT);
+    for(size_t i = 0; i < (1 << SKETCH_HEIGHT); ++i)
+    {
+        if(buckets[i]->size > 0)
+        {
+            KDNode* subtree = buildTreeParallel(buckets[i]->bucket, buckets[i]->size, depth + SKETCH_HEIGHT);
             attachSubtree(sketch, i, subtree);
         }
     }
 
-    freeBucketArray(buckets);
+    free(buckets->bucket);
+    free(buckets);
     return sketch;
 }
 
-// To continue HERE
-static BucketArray* sievePoints(point** points, size_t size, KDNode* sketch)
+static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 {
-    size_t num_chunks = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+    size_t numChunks = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
     #pragma omp parallel for
-    for(size_t i = 0; i < num_chunks; i++) {
-        count_matrix[i] = (u32*)calloc(1 << SKETCH_HEIGHT, sizeof(u32));
+    for(size_t i = 0; i < numChunks; ++i)
+    {
+        countMatrix[i] = (u32*)calloc(1 << SKETCH_HEIGHT, sizeof(u32));
 
-        size_t chunk_start = i * CHUNK_SIZE;
-        size_t chunk_end = min(chunk_start + CHUNK_SIZE, size);
+        size_t chunkStart = i * CHUNK_SIZE;
+        size_t chunkEnd = (chunkStart + CHUNK_SIZE < size) ? (chunkStart + CHUNK_SIZE) : size;
 
-        // Count points per bucket (lines 13-15)
-        for(size_t j = chunk_start; j < chunk_end; j++) {
-            u32 bucket_id = get_bucket_id(sketch, points[j]);
-            count_matrix[i][bucket_id]++;
+        for(size_t j = chunkStart; j < chunkEnd; ++j)
+        {
+            u32 bucketId = getBucket(sketch, points[j]);
+            countMatrix[i][bucketId]++;
         }
     }
 
-    // Compute column-major prefix sum (line 16)
-    u32** offset_matrix = computePrefixSum(count_matrix, num_chunks, 1 << SKETCH_HEIGHT);
+    u32** offsetMatrix = computePrefixSum(countMatrix, numChunks, 1 << SKETCH_HEIGHT);
 
-    // Get bucket offsets (line 17)
-    u32* bucket_offsets = (u32*)malloc((1 << SKETCH_HEIGHT) * sizeof(u32));
-    for(int j = 0; j < (1 << SKETCH_HEIGHT); j++) {
-        bucket_offsets[j] = offset_matrix[0][j];
-    }
+    u32* bucketOffsets = (u32*)malloc((1 << SKETCH_HEIGHT) * sizeof(u32));
+    for(size_t j = 0; j < (1 << SKETCH_HEIGHT); ++j)
+        bucketOffsets[j] = offsetMatrix[0][j];
 
-    // Allocate destination array
-    point** sorted_points = (point**)malloc(size * sizeof(point*));
+    point** sortedPoints = (point**)malloc(size * sizeof(point*));
 
-    // Move points to final positions (lines 18-23)
     #pragma omp parallel for
-    for(size_t i = 0; i < num_chunks; i++) {
-        size_t chunk_start = i * CHUNK_SIZE;
-        size_t chunk_end = min(chunk_start + CHUNK_SIZE, size);
+    for(size_t i = 0; i < numChunks; ++i)
+    {
+        size_t chunkStart = i * CHUNK_SIZE;
+        size_t chunkEnd = (chunkStart + CHUNK_SIZE < size) ? (chunkStart + CHUNK_SIZE) : size;
 
-        for(size_t j = chunk_start; j < chunk_end; j++) {
-            u32 bucket_id = get_bucket_id(sketch, points[j]);
-            u32 dest_idx = offset_matrix[i][bucket_id];
-            sorted_points[dest_idx] = points[j];
-            offset_matrix[i][bucket_id]++;
+        for(size_t j = chunkStart; j < chunkEnd; ++j)
+        {
+            u32 bucketId = getBucket(sketch, points[j]);
+            u32 index = offsetMatrix[i][bucketId];
+            sortedPoints[index] = points[j];
+            offsetMatrix[i][bucketId]++;
         }
     }
 
-    // Copy back to original array (line 24)
-    memcpy(points, sorted_points, size * sizeof(point*));
+    memcpy(points, sortedPoints, size * sizeof(point*));
 
     Bucket* buckets = malloc((1 << SKETCH_HEIGHT) * sizeof(Bucket);
     buckets->bucket = malloc((1 << SKETCH_HEIGHT) * sizeof(point));
 
-    // Create result slices (lines 25-27)
-    for(int j = 0; j < (1 << SKETCH_HEIGHT); j++) {
-        size_t start = bucket_offsets[j];
-        size_t end = (j < (1 << SKETCH_HEIGHT) - 1) ? bucket_offsets[j + 1] : size;
+    for(size_t j = 0; j < (1 << SKETCH_HEIGHT); ++j)
+    {
+        size_t start = bucketOffsets[j];
+        size_t end = (j < (1 << SKETCH_HEIGHT) - 1) ? bucketOffsets[j + 1] : size;
 
-        result->points[j] = &points[start];
-        result->sizes[j] = end - start;
+        buckets->points[j] = &points[start];
+        buckets->sizes[j] = end - start;
     }
 
-    // Cleanup
-    free(sorted_points);
-    free(bucket_offsets);
-    for(size_t i = 0; i < num_chunks; i++) {
-        free(count_matrix[i]);
-        free(offset_matrix[i]);
-    }
-    free(count_matrix);
-    free(offset_matrix);
+    free(sortedPoints);
+    free(bucketOffsets);
 
-    return result;
+    for(size_t i = 0; i < numChunks; ++i)
+    {
+        free(countMatrix[i]);
+        free(offsetMatrix[i]);
+    }
+
+    free(countMatrix);
+    free(offsetMatrix);
+
+    return buckets;
 }
 
 static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int levels)
@@ -176,40 +172,50 @@ static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int 
     (*root)->parent = NULL;
 
     size_t leftCount = 0;
-    size_t rightCount
+    size_t rightCount = 0;
     point** leftSamples = (point**)malloc(sampleCount * sizeof(point*));
     point** rightSamples = (point**)malloc(sampleCount * sizeof(point*));
 
-    for(size_t i = 0; i < sampleCount; i++)
+    for(size_t i = 0; i < sampleCount; ++i)
     {
         if(samples[i]->coords[splitDim] < splitValue)
-            left_samples[leftCount++] = samples[i];
+            leftSamples[leftCount++] = samples[i];
         else
-            right_samples[rightCount++] = samples[i];
+            rightSamples[rightCount++] = samples[i];
     }
 
-    buildSketch(&(*root)->data.internal.left, left_samples, left_count, levels - 1);
-    buildSketch(&(*root)->data.internal.right, right_samples, sampleCount - left_count, levels - 1);
+    buildSketch(&(*root)->data.internal.left, leftSamples, leftCount, levels - 1);
+    buildSketch(&(*root)->data.internal.right, rightSamples, rightCount, levels - 1);
+
+    if((*root)->data.internal.left)
+        (*root)->data.internal.left->parent = *root;
+    if((*root)->data.internal.right)
+        (*root)->data.internal.right->parent = *root;
 
     free(leftSamples);
     free(rightSamples);
 }
 
-static u32 get_bucket_id(KDNode* sketch, point* p)
+static u32 getBucket(KDNode* sketch, point* p)
 {
     u32 id = 0;
     KDNode* current = sketch;
     int level = 0;
 
-    while(current && level < SKETCH_HEIGHT && !isLeaf(current)) {
+    while(current && level < SKETCH_HEIGHT && current->type != LEAF
+    {
         id <<= 1;
-        if(p->coords[current->splitDim] >= current->splitValue) {
+        if(p->coords[current->splitDim] >= current->splitValue)
+        {
             id |= 1;
             current = current->data.internal.right;
-        } else {
+        }
+        else
+        {
             current = current->data.internal.left;
         }
-        level++;
+
+        ++level;
     }
 
     return id;
@@ -270,15 +276,15 @@ static int findSplitDim(point** points, size_t start, size_t end)
 {
     f32 minCoords[DIMENSIONS], maxCoords[DIMENSIONS];
 
-    for(int i = 0; i < DIMENSIONS; i++)
+    for(size_t i = 0; i < DIMENSIONS; ++i)
     {
         minCoords[i] = INFINITY;
         maxCoords[i] = -INFINITY;
     }
 
-    for(size_t i = start; i <= end; i++)
+    for(size_t i = start; i <= end; ++i)
     {
-        for(int j = 0; j < DIMENSIONS; j++)
+        for(size_t j = 0; j < DIMENSIONS; ++j)
         {
             f32 val = points[i]->coords[j];
             if(val < minCoords[j])
@@ -292,7 +298,7 @@ static int findSplitDim(point** points, size_t start, size_t end)
     int splitDim = 0;
     f32 maxRange = maxCoords[0] - minCoords[0];
 
-    for(int i = 1; i < DIMENSIONS; i++)
+    for(size_t i = 1; i < DIMENSIONS; ++i)
     {
         f32 range = maxCoords[i] - minCoords[i];
 
@@ -328,18 +334,6 @@ static size_t parallelPartition(point** points, size_t start, size_t end, int di
     return i;
 }
 
-// Helper functions for bucket array management
-static BucketArray* createBucketArray(int numBuckets)
-{
-
-
-static void freeBucketArray(BucketArray* ba)
-{
-    free(ba->points);
-    free(ba->sizes);
-    free(ba);
-}
-
 static KDNode* createLeafNode(point** points, size_t size)
 {
     KDNode* leaf = (KDNode*)malloc(sizeof(KDNode));
@@ -353,101 +347,203 @@ static KDNode* createLeafNode(point** points, size_t size)
     return leaf;
 }
 
-static inline bool isLeaf(KDNode* node)
+static void attachSubtree(KDNode* sketch, int bucketId, KDNode* subtree)
 {
-    return node->type == LEAF;
-}
+    if (!sketch || bucketId < 0 || bucketId >= (1 << SKETCH_HEIGHT))
+        return;
 
-static void attachSubtree(KDNode* sketch, int bucket_id, KDNode* subtree)
-{
-    // Find the external node in sketch corresponding to bucket_id
-    // and replace it with subtree
-    // This is a simplified version - actual implementation would need
-    // to traverse the sketch to find the correct position
     KDNode* current = sketch;
     int level = SKETCH_HEIGHT - 1;
 
-    while(level >= 0) {
-        int bit = (bucket_id >> level) & 1;
-        if(bit == 0) {
-            if(level == 0) {
+    // Navigate to the external node (leaf) at the given bucket ID
+    while (level >= 0)
+    {
+        int bit = (bucketId >> level) & 1;
+
+        // At the last level, this is where we attach the subtree
+        if (level == 0)
+        {
+            // The current node should be an internal node at this point
+            // We need to replace its appropriate child with the subtree
+            if (bit == 0)
+            {
+                // The existing left child (which should be a leaf/external node)
+                // gets replaced by the constructed subtree
+                if (current->data.internal.left)
+                {
+                    // Free the existing external node if needed
+                    // freeExternalNode(current->data.internal.left);
+                }
                 current->data.internal.left = subtree;
-                if(subtree) subtree->parent = current;
-            } else {
+            }
+            else
+            {
+                if (current->data.internal.right)
+                {
+                    // Free the existing external node if needed
+                    // freeExternalNode(current->data.internal.right);
+                }
+                current->data.internal.right = subtree;
+            }
+
+            if (subtree)
+                subtree->parent = current;
+        }
+        else
+        {
+            // Navigate to the next level
+            if (bit == 0)
+            {
+                if (!current->data.internal.left)
+                {
+                    // This shouldn't happen if the sketch is properly built
+                    fprintf(stderr, "Error: Invalid sketch structure at level %d\n", level);
+                    return;
+                }
                 current = current->data.internal.left;
             }
-        } else {
-            if(level == 0) {
-                current->data.internal.right = subtree;
-                if(subtree) subtree->parent = current;
-            } else {
+            else
+            {
+                if (!current->data.internal.right)
+                {
+                    fprintf(stderr, "Error: Invalid sketch structure at level %d\n", level);
+                    return;
+                }
                 current = current->data.internal.right;
             }
         }
+
         level--;
     }
 }
 
-// Comparison function for qsort_r
+//
+//
+//
+//
+//
+//
+//
+//
+    // Find the external node in sketch corresponding to bucket_id
+    // and replace it with subtree
+    // This is a simplified version - actual implementation would need
+    // to traverse the sketch to find the correct position
+    {
+        int bit = (bucket_id >> level) & 1;
+        if(bit == 0)
+        {
+            if(level == 0)
+            {
+                current->data.internal.left = subtree;
+
+                if(subtree)
+                    subtree->parent = current;
+            }
+            else
+            {
+                current = current->data.internal.left;
+            }
+        }
+        else
+        {
+            if(level == 0)
+            {
+                current->data.internal.right = subtree;
+
+                if(subtree)
+                    subtree->parent = current;
+            }
+            else
+            {
+                current = current->data.internal.right;
+            }
+        }
+
+        level--;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 static int compareByDim(const void* a, const void* b, void* dim)
 {
     int d = *(int*)dim;
     point* pa = *(point**)a;
     point* pb = *(point**)b;
 
-    if(pa->coords[d] < pb->coords[d]) return -1;
-    if(pa->coords[d] > pb->coords[d]) return 1;
+    if(pa->coords[d] < pb->coords[d])
+        return -1;
+
+    if(pa->coords[d] > pb->coords[d])
+        return 1;
+
     return 0;
 }
 
-// Helper for prefix sum computation
 static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols)
 {
-    u32** result = (u32**)malloc(rows * sizeof(u32*));
-
-    // First, compute row-wise prefix sums
-    #pragma omp parallel for
-    for(size_t i = 0; i < rows; i++) {
-        result[i] = (u32*)malloc(cols * sizeof(u32));
-        u32 sum = 0;
-        for(size_t j = 0; j < cols; j++) {
-            result[i][j] = sum;
-            sum += matrix[i][j];
-        }
-    }
-
-    // Then, compute column-wise prefix sums (transpose approach)
     u32** transposed = (u32**)malloc(cols * sizeof(u32*));
-    for(size_t j = 0; j < cols; j++) {
+    for(size_t j = 0; j < cols; ++j)
+    {
         transposed[j] = (u32*)malloc(rows * sizeof(u32));
-        for(size_t i = 0; i < rows; i++) {
-            transposed[j][i] = result[i][j];
-        }
+        for(size_t i = 0; i < rows; ++i)
+            transposed[j][i] = matrix[i][j];
     }
 
-    // Compute prefix sums on transposed
     #pragma omp parallel for
-    for(size_t j = 0; j < cols; j++) {
+    for(size_t j = 0; j < cols; ++j)
+    {
         u32 sum = 0;
-        for(size_t i = 0; i < rows; i++) {
-            u32 temp = transposed[j][i];
+        for(size_t i = 0; i < rows; ++i)
+        {
+            u32 current_val = transposed[j][i];
             transposed[j][i] = sum;
-            sum += temp;
+            sum += current_val;
         }
     }
 
-    // Transpose back
+    u32* columnPrefixSums = (u32*)calloc(cols + 1, sizeof(u32));
+
+    u32 total = 0;
+    for(size_t j = 0; j < cols; ++j)
+    {
+        columnPrefixSums[j] = total;
+        total += transposed[j][rows - 1] + matrix[rows - 1][j];
+    }
+    columnPrefixSums[cols] = total;
+
     #pragma omp parallel for
-    for(size_t i = 0; i < rows; i++) {
-        for(size_t j = 0; j < cols; j++) {
-            result[i][j] = transposed[j][i];
-        }
+    for(size_t j = 0; j < cols; ++j)
+    {
+        u32 colOffset = columnPrefixSums[j];
+        for(size_t i = 0; i < rows; ++i)
+            transposed[j][i] += colOffset;
     }
 
-    // Cleanup
-    for(size_t j = 0; j < cols; j++) {
-        free(transposed[j]);
+    u32** result = (u32**)malloc(rows * sizeof(u32*));
+    #pragma omp parallel for
+    for(size_t i = 0; i < rows; ++i)
+    {
+        result[i] = (u32*)malloc(cols * sizeof(u32));
+        for(size_t j = 0; j < cols; ++j)
+            result[i][j] = transposed[j][i];
     }
+
+    free(columnPrefixSums);
+    for(size_t j = 0; j < cols; ++j)
+        free(transposed[j]);
     free(transposed);
 
     return result;
