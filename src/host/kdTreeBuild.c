@@ -16,6 +16,7 @@ static int findSplitDim(point** points, size_t start, size_t end);
 static size_t parallelPartition(point** points, size_t start, size_t end, int dim, f32 pivot);
 static BucketArray* createBucketArray(int numBuckets);
 static KDNode* createLeafNode(point** points, size_t size);
+static void freeLeafNode(KDNode* node)
 static void attachSubtree(KDNode* sketch, int bucketId, KDNode* subtree);
 static int compareByDim(const void* a, const void* b, void* dim);
 static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols);
@@ -156,7 +157,15 @@ static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int 
 {
     if(levels == 0 || sampleCount <= LEAF_WRAP_THRESHOLD)
     {
-        *root = createLeafNode(samples, sampleCount);
+        *root = (KDNode*)malloc(sizeof(KDNode));
+        if(!*root)
+            return;
+
+        (*root)->type = LEAF;
+        (*root)->parent = NULL;
+        (*root)->data.leaf.points = NULL;
+        (*root)->data.leaf.pointCount = 0;
+
         return;
     }
 
@@ -189,6 +198,7 @@ static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int 
 
     if((*root)->data.internal.left)
         (*root)->data.internal.left->parent = *root;
+
     if((*root)->data.internal.right)
         (*root)->data.internal.right->parent = *root;
 
@@ -229,20 +239,18 @@ static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, 
         return createLeafNode(&points[start], size);
 
     KDNode* node = (KDNode*)malloc(sizeof(KDNode));
-    if(!node) return NULL;
+    if(!node)
+        return NULL;
 
-    // Find split dimension and median
-    int split_dim = depth % DIMENSIONS;  // Simple cycling through dimensions
-    f32 split_value = findMedian(points, start, end, split_dim);
+    int splitDim = findSplitDim(points, start, end);
+    f32 splitValue = findMedian(points, start, end, splitDim);
 
-    node->splitDim = split_dim;
-    node->splitValue = split_value;
+    node->splitDim = splitDim;
+    node->splitValue = splitValue;
     node->parent = NULL;
 
-    // Partition points (parallel partition)
-    size_t mid = parallelPartition(points, start, end, split_dim, split_value);
+    size_t mid = parallelPartition(points, start, end, splitDim, splitValue);
 
-    // Recursively build subtrees in parallel
     #pragma omp parallel sections
     {
         #pragma omp section
@@ -312,26 +320,35 @@ static int findSplitDim(point** points, size_t start, size_t end)
     return splitDim;
 }
 
-// Helper function for parallel partition
 static size_t parallelPartition(point** points, size_t start, size_t end, int dim, f32 pivot)
 {
-    // Simple sequential partition for now
-    // In practice, implement parallel partition
-    size_t i = start;
-    size_t j = end;
+    size_t size = end - start + 1;
 
-    while(i <= j) {
-        while(i <= end && points[i]->coords[dim] < pivot) i++;
-        while(j >= start && points[j]->coords[dim] >= pivot) j--;
+    point** left = (point**)malloc(size * sizeof(point*));
+    point** right = (point**)malloc(size * sizeof(point*));
 
-        if(i < j) {
-            point* temp = points[i];
-            points[i] = points[j];
-            points[j] = temp;
-        }
-    }
+    size_t leftCount = 0;
+    size_t rightCount = 0;
 
-    return i;
+    #pragma omp parallel for reduction(+:leftCount, rightCount)
+    for(size_t i = start; i <= end; ++i)
+        if(points[i]->coords[dim] < pivot)
+            left[leftCount++] = points[i];
+        else
+            right[rightCount++] = points[i];
+
+    #pragma omp parallel for
+    for(size_t i = 0; i < leftCount; ++i)
+        points[start + i] = left[i];
+
+    #pragma omp parallel for
+    for(size_t i = 0; i < rightCount; ++i)
+        points[start + leftCount + i] = right[i];
+
+    free(left);
+    free(right);
+
+    return start + leftCount;
 }
 
 static KDNode* createLeafNode(point** points, size_t size)
@@ -347,135 +364,63 @@ static KDNode* createLeafNode(point** points, size_t size)
     return leaf;
 }
 
+static void freeLeafNode(KDNode* node)
+{
+    if(!node)
+        return;
+
+    if(node->type == LEAF)
+    {
+        if (node->data.leaf.points)
+            free(node->data.leaf.points);
+
+        free(node);
+    }
+}
+
 static void attachSubtree(KDNode* sketch, int bucketId, KDNode* subtree)
 {
-    if (!sketch || bucketId < 0 || bucketId >= (1 << SKETCH_HEIGHT))
+    if(!sketch || bucketId < 0 || bucketId >= (1 << SKETCH_HEIGHT))
         return;
 
     KDNode* current = sketch;
     int level = SKETCH_HEIGHT - 1;
 
-    // Navigate to the external node (leaf) at the given bucket ID
-    while (level >= 0)
+    while(level >= 0)
     {
         int bit = (bucketId >> level) & 1;
 
-        // At the last level, this is where we attach the subtree
-        if (level == 0)
+        if(level == 0)
         {
-            // The current node should be an internal node at this point
-            // We need to replace its appropriate child with the subtree
-            if (bit == 0)
+            if(bit == 0)
             {
-                // The existing left child (which should be a leaf/external node)
-                // gets replaced by the constructed subtree
-                if (current->data.internal.left)
-                {
-                    // Free the existing external node if needed
-                    // freeExternalNode(current->data.internal.left);
-                }
+                if(current->data.internal.left)
+                    freeLeafNode(current->data.internal.left);
+
                 current->data.internal.left = subtree;
             }
             else
             {
-                if (current->data.internal.right)
-                {
-                    // Free the existing external node if needed
-                    // freeExternalNode(current->data.internal.right);
-                }
+                if(current->data.internal.right)
+                    freeLeafNode(current->data.internal.right);
+
                 current->data.internal.right = subtree;
             }
 
-            if (subtree)
+            if(subtree)
                 subtree->parent = current;
         }
         else
         {
-            // Navigate to the next level
-            if (bit == 0)
-            {
-                if (!current->data.internal.left)
-                {
-                    // This shouldn't happen if the sketch is properly built
-                    fprintf(stderr, "Error: Invalid sketch structure at level %d\n", level);
-                    return;
-                }
+            if(bit == 0)
                 current = current->data.internal.left;
-            }
             else
-            {
-                if (!current->data.internal.right)
-                {
-                    fprintf(stderr, "Error: Invalid sketch structure at level %d\n", level);
-                    return;
-                }
                 current = current->data.internal.right;
-            }
         }
 
         level--;
     }
 }
-
-//
-//
-//
-//
-//
-//
-//
-//
-    // Find the external node in sketch corresponding to bucket_id
-    // and replace it with subtree
-    // This is a simplified version - actual implementation would need
-    // to traverse the sketch to find the correct position
-    {
-        int bit = (bucket_id >> level) & 1;
-        if(bit == 0)
-        {
-            if(level == 0)
-            {
-                current->data.internal.left = subtree;
-
-                if(subtree)
-                    subtree->parent = current;
-            }
-            else
-            {
-                current = current->data.internal.left;
-            }
-        }
-        else
-        {
-            if(level == 0)
-            {
-                current->data.internal.right = subtree;
-
-                if(subtree)
-                    subtree->parent = current;
-            }
-            else
-            {
-                current = current->data.internal.right;
-            }
-        }
-
-        level--;
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 static int compareByDim(const void* a, const void* b, void* dim)
 {
