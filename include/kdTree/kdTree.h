@@ -23,16 +23,6 @@ typedef struct point
 //     u32 lastUpdate;
 // } approxCounter;
 
-typedef struct KDGroup
-{
-    u32 id;
-    KDNode* rootNodes;
-    size_t count;
-
-    f32 minSize;
-    f32 maxSize;
-} KDGroup;
-
 typedef struct KDNode
 {
     nodeType type;
@@ -56,6 +46,16 @@ typedef struct KDNode
         } leaf;
     } data;
 } KDNode;
+
+typedef struct KDGroup
+{
+    u32 id;
+    KDNode* rootNodes;
+    size_t count;
+
+    f32 minSize;
+    f32 maxSize;
+} KDGroup;
 
 typedef struct KDTree
 {
