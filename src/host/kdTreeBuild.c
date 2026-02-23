@@ -32,7 +32,6 @@ KDTree* onChipBuild(point** points, size_t size)
         return NULL;
 
     tree->totalPoints = size;
-    tree->dimensions = DIMENSIONS;
     tree->totalNodes = 0;
 
     if(size < (1 << SKETCH_HEIGHT) * OVERSAMPLING_RATE)

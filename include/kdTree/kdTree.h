@@ -26,7 +26,7 @@ typedef struct point
 typedef struct KDNode
 {
     nodeType type;
-    KDNode* parent;
+    struct KDNode* parent;
     // approxCounter size;
 
     union
@@ -36,8 +36,8 @@ typedef struct KDNode
             i8 splitDim;
             f32 splitValue;
 
-            KDNode* left;
-            KDNode* right;
+            struct KDNode* left;
+            struct KDNode* right;
         } internal;
         struct
         {
