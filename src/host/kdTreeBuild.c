@@ -70,7 +70,7 @@ static KDNode* buildTreeParallel(point** points, size_t size, int depth)
     {
         if(buckets[i].size > 0)
         {
-            KDNode* subtree = buildTreeParallel(buckets[i]->bucket, buckets[i]->size, depth + SKETCH_HEIGHT);
+            KDNode* subtree = buildTreeParallel(buckets[i].bucket, buckets[i].size, depth + SKETCH_HEIGHT);
             attachSubtree(sketch, i, subtree);
         }
     }
@@ -83,7 +83,7 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 {
     size_t numChunks = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
-    u32** countMatrix = (u32**)malloc(numChunks * sizeof(u32*))
+    u32** countMatrix = (u32**)malloc(numChunks * sizeof(u32*));
 
     #pragma omp parallel for
     for(size_t i = 0; i < numChunks; ++i)
@@ -210,7 +210,7 @@ static u32 getBucket(KDNode* sketch, point* p)
     KDNode* current = sketch;
     int level = 0;
 
-    while(current && level < SKETCH_HEIGHT && current->type != LEAF
+    while(current && level < SKETCH_HEIGHT && current->type != LEAF)
     {
         id <<= 1;
         if(p->coords[current->splitDim] >= current->splitValue)
