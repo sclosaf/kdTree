@@ -26,7 +26,7 @@
 #endif
 
 #ifndef CHUNK_SIZE
-#define CHUNK_SIZE (1 << SKELETON_HEIGHT)
+#define CHUNK_SIZE (1 << SKETCH_HEIGHT)
 #endif
 
 #endif
