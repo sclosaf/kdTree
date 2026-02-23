@@ -3,7 +3,7 @@ HOST_INCLUDE_DIRS = /usr/include /usr/include/dpu
 DPU_INCLUDE_DIRS =
 
 CC_HOST      = gcc
-CFLAGS_HOST  = -O3 -Wall -fopenmp -Iinclude $(addprefix -I, $(HOST_INCLUDE_DIRS))
+CFLAGS_HOST  = -O3 -Wall -fopenmp -D_GNU_SOURCE -Iinclude $(addprefix -I, $(HOST_INCLUDE_DIRS))
 LDFLAGS_HOST = -fopenmp -ldpu
 
 CC_DPU       = dpu-upmem-dpurte-clang
