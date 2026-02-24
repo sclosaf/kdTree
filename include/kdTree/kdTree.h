@@ -49,7 +49,7 @@ typedef struct KDNode
 
 typedef struct KDGroup
 {
-    KDNode* rootNodes;
+    KDNode** rootNodes;
     size_t count;
 
     f32 minSize;
