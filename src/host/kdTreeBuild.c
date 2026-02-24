@@ -9,9 +9,9 @@
 #include "utils/constants.h"
 #include "utils/types.h"
 
-static void assignNodesToGroups(KDNode* node, KDGroup** groups, int numGroups);
+static void assignNodesToGroups(KDNode* node, KDGroup** groups, u8 numGroups);
 static size_t calculateSubtreeSize(KDNode* node);
-static int findGroup(size_t size, KDGroup** groups, u8 numGroups);
+static i16 findGroup(size_t size, KDGroup** groups, u8 numGroups);
 
 static KDNode* buildTreeParallel(point** points, size_t size, u16 depth);
 static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, u16 depth);
@@ -65,21 +65,21 @@ KDTree* onChipBuild(point** points, size_t size)
         return NULL;
     }
 
-    // KDTree* finalTree = replicate(tree, groups);
-    //
-    // for(size_t i = 0; groups[i] != NULL; i++)
-    // {
-    //     if(groups[i]->rootNodes)
-    //         free(groups[i]->rootNodes);
-    //     free(groups[i]);
-    // }
-    //
-    // free(groups);
-    //
-    // freeKDTree(tree->root);
-    // free(tree);
-    //
-    // return finalTree;
+    KDTree* finalTree = replicate(tree, groups);
+
+    for(size_t i = 0; groups[i] != NULL; ++i)
+    {
+        if(groups[i]->rootNodes)
+            free(groups[i]->rootNodes);
+        free(groups[i]);
+    }
+
+    free(groups);
+
+    freeKDTree(tree->root);
+    free(tree);
+
+    return finalTree;
 }
 
 KDGroup** logStarDecompose(KDTree* tree)
@@ -134,7 +134,7 @@ static void assignNodesToGroups(KDNode* node, KDGroup** groups, u8 numGroups)
     {
         size_t subtreeSize = calculateSubtreeSize(node);
 
-        int groupId = findGroup(subtreeSize, groups, numGroups);
+        i16 groupId = findGroup(subtreeSize, groups, numGroups);
 
         if(groupId >= 0)
         {
@@ -158,15 +158,103 @@ static size_t calculateSubtreeSize(KDNode* node)
     return calculateSubtreeSize(node->data.internal.left) + calculateSubtreeSize(node->data.internal.right);
 }
 
-static int findGroup(size_t size, KDGroup** groups, u8 numGroups)
+static i16 findGroup(size_t size, KDGroup** groups, u8 numGroups)
 {
-    for(int i = 0; i < numGroups; i++)
+    for(int i = 0; i < numGroups; ++i)
     {
         if(size > groups[i]->minSize && size <= groups[i]->maxSize)
             return i;
     }
     return -1;
 }
+
+KDTree* replicate(KDTree* original, KDGroup** groups)
+{
+    if(!original || !groups)
+        return NULL;
+
+    KDTree* newTree = (KDTree*)malloc(sizeof(KDTree));
+    if(!newTree)
+        return NULL;
+
+    newTree->totalPoints = original->totalPoints;
+    newTree->totalNodes = 0;
+
+    newTree->root = buildReplicatedTree(groups, 0);
+
+    return newTree;
+}
+
+static KDNode* buildReplicatedTree(KDGroup** groups, u8 groupLevel)
+{
+    u8 currentLevel = groupLevel;
+    while(groups[currentLevel] != NULL && groups[currentLevel]->count == 0)
+        currentLevel++;
+
+    if(groups[currentLevel] == NULL)
+        return NULL;
+
+    KDGroup* currentGroup = groups[currentLevel];
+
+    KDNode* node = (KDNode*)malloc(sizeof(KDNode));
+    if(!node)
+        return NULL;
+
+    if(currentLevel == 0)
+    {
+        KDNode* originalNode = currentGroup->rootNodes[0];
+        copyNode(node, originalNode);
+    }
+    else
+    {
+        node->type = INTERNAL;
+        node->parent = NULL;
+
+        KDNode* templateNode = currentGroup->rootNodes[0];
+        node->data.internal.splitDim = templateNode->data.internal.splitDim;
+        node->data.internal.splitValue = templateNode->data.internal.splitValue;
+
+        node->data.internal.left = buildReplicatedTree(groups, currentLevel + 1);
+        node->data.internal.right = buildReplicatedTree(groups, currentLevel + 1);
+
+        if(node->data.internal.left)
+            node->data.internal.left->parent = node;
+
+        if(node->data.internal.right)
+            node->data.internal.right->parent = node;
+    }
+
+    return node;
+}
+
+static void copyNode(KDNode* dest, KDNode* src)
+{
+    if(!dest || !src)
+        return;
+
+    dest->type = src->type;
+    dest->parent = NULL;
+
+    if(src->type == INTERNAL)
+    {
+        dest->data.internal.splitDim = src->data.internal.splitDim;
+        dest->data.internal.splitValue = src->data.internal.splitValue;
+        dest->data.internal.left = NULL;
+        dest->data.internal.right = NULL;
+    }
+    else
+    {
+        dest->data.leaf.pointsCount = src->data.leaf.pointsCount;
+        dest->data.leaf.points = (point*)malloc(dest->data.leaf.pointsCount * sizeof(point));
+
+        if(dest->data.leaf.points)
+        {
+            memcpy(dest->data.leaf.points, src->data.leaf.points,
+                   dest->data.leaf.pointsCount * sizeof(point));
+        }
+    }
+}
+
 
 static KDNode* buildTreeParallel(point** points, size_t size, u16 depth)
 {
@@ -229,7 +317,7 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
         for(size_t j = chunkStart; j < chunkEnd; ++j)
         {
             u32 bucketId = getBucket(sketch, points[j]);
-            countMatrix[i][bucketId]++;
+            ++countMatrix[i][bucketId];
         }
     }
 
@@ -272,7 +360,7 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
             u32 bucketId = getBucket(sketch, points[j]);
             u32 index = offsetMatrix[i][bucketId];
             sortedPoints[index] = points[j];
-            offsetMatrix[i][bucketId]++;
+            ++offsetMatrix[i][bucketId];
         }
     }
 
