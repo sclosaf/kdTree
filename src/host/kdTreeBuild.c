@@ -13,6 +13,9 @@ static void assignNodesToGroups(KDNode* node, KDGroup** groups, u8 numGroups);
 static size_t calculateSubtreeSize(KDNode* node);
 static i16 findGroup(size_t size, KDGroup** groups, u8 numGroups);
 
+static void copyNode(KDNode* dest, KDNode* src);
+static KDNode* buildReplicatedTree(KDGroup** groups, u8 groupLevel);
+
 static KDNode* buildTreeParallel(point** points, size_t size, u16 depth);
 static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, u16 depth);
 static void buildSketch(KDNode** root, point** samples, size_t sampleCount, u16 level);
