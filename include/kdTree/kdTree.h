@@ -33,7 +33,7 @@ typedef struct KDNode
     {
         struct
         {
-            i8 splitDim;
+            u8 splitDim;
             f32 splitValue;
 
             struct KDNode* left;
@@ -49,7 +49,6 @@ typedef struct KDNode
 
 typedef struct KDGroup
 {
-    u32 id;
     KDNode* rootNodes;
     size_t count;
 

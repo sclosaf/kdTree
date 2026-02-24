@@ -9,23 +9,30 @@
 #include "utils/constants.h"
 #include "utils/types.h"
 
+static void assignNodesToGroups(KDNode* node, KDGroup** groups, int numGroups);
+static size_t calculateSubtreeSize(KDNode* node);
+static int findGroup(size_t size, KDGroup** groups, u8 numGroups);
+
 static KDNode* buildTreeParallel(point** points, size_t size, u16 depth);
-static Bucket* sievePoints(point** points, size_t size, KDNode* sketch);
-static void buildSketch(KDNode** root, point** samples, size_t sampleCount, u16 level);
-static u32 getBucket(KDNode* sketch, point* p);
 static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, u16 depth);
+static void buildSketch(KDNode** root, point** samples, size_t sampleCount, u16 level);
+static Bucket* sievePoints(point** points, size_t size, KDNode* sketch);
+
+static u32 getBucket(KDNode* sketch, point* p);
+
 static f32 findMedian(point** points, size_t start, size_t end, u8 dim);
 static u8 findSplitDim(point** points, size_t start, size_t end);
 static size_t parallelPartition(point** points, size_t start, size_t end, u8 dim, f32 pivot);
+
 static KDNode* createLeafNode(point** points, size_t size);
 static void freeLeafNode(KDNode* node);
+
 static void attachSubtree(KDNode* sketch, u16 bucketId, KDNode* subtree);
 static int compareByDim(const void* a, const void* b, void* dim);
 static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols);
+
 static void freeKDTree(KDNode* node);
 static void freeMatrix(void** matrix, size_t rows);
-
-// fix ints, manage malloc
 
 KDTree* onChipBuild(point** points, size_t size)
 {
@@ -44,9 +51,121 @@ KDTree* onChipBuild(point** points, size_t size)
     else
         tree->root = buildTreeParallel(points, size, 0);
 
-    // TO COMPLETE logStar ....
+    if(!tree->root)
+    {
+        free(tree);
+        return NULL;
+    }
 
-    return tree;
+    KDGroup** groups = logStarDecompose(tree);
+    if(!groups)
+    {
+        freeKDTree(tree->root);
+        free(tree);
+        return NULL;
+    }
+
+    // KDTree* finalTree = replicate(tree, groups);
+    //
+    // for(size_t i = 0; groups[i] != NULL; i++)
+    // {
+    //     if(groups[i]->rootNodes)
+    //         free(groups[i]->rootNodes);
+    //     free(groups[i]);
+    // }
+    //
+    // free(groups);
+    //
+    // freeKDTree(tree->root);
+    // free(tree);
+    //
+    // return finalTree;
+}
+
+KDGroup** logStarDecompose(KDTree* tree)
+{
+    if(!tree || !tree->root)
+        return NULL;
+
+    size_t totalSize = tree->totalPoints;
+    u8 numGroups = 0;
+
+    size_t current = totalSize;
+    while(current > LEAF_WRAP_THRESHOLD)
+    {
+        ++numGroups;
+        current = (size_t)log2(current);
+    }
+    ++numGroups;
+
+    KDGroup** groups = (KDGroup**)malloc((numGroups) * sizeof(KDGroup*));
+    if(!groups)
+        return NULL;
+
+    for(size_t i = 0; i < numGroups; ++i)
+    {
+        groups[i] = (KDGroup*)malloc(sizeof(KDGroup));
+        if(!groups[i])
+        {
+            for(size_t j = 0; j < i; ++j)
+                free(groups[j]);
+            free(groups);
+            return NULL;
+        }
+
+        groups[i]->groupId = i;
+        groups[i]->rootNodes = NULL;
+        groups[i]->count = 0;
+        groups[i]->minSize = (i == 0) ? 0 : pow(2, pow(2, i - 1));
+        groups[i]->maxSize = pow(2, pow(2, i));
+    }
+
+    assignNodesToGroups(tree->root, groups, numGroups);
+
+    return groups;
+}
+
+static void assignNodesToGroups(KDNode* node, KDGroup** groups, u8 numGroups)
+{
+    if(!node)
+        return;
+
+    if(node->type == INTERNAL)
+    {
+        size_t subtreeSize = calculateSubtreeSize(node);
+
+        int groupId = findGroup(subtreeSize, groups, numGroups);
+
+        if(groupId >= 0)
+        {
+            groups[groupId]->rootNodes = realloc(groups[groupId]->rootNodes, (groups[groupId]->count + 1) * sizeof(KDNode*));
+            groups[groupId]->rootNodes[groups[groupId]->count++] = node;
+        }
+
+        assignNodesToGroups(node->data.internal.left, groups, numGroups);
+        assignNodesToGroups(node->data.internal.right, groups, numGroups);
+    }
+}
+
+static size_t calculateSubtreeSize(KDNode* node)
+{
+    if(!node)
+        return 0;
+
+    if(node->type == LEAF)
+        return node->data.leaf.pointsCount;
+
+    return calculateSubtreeSize(node->data.internal.left) + calculateSubtreeSize(node->data.internal.right);
+}
+
+static int findGroup(size_t size, KDGroup** groups, u8 numGroups)
+{
+    for(int i = 0; i < numGroups; i++)
+    {
+        if(size > groups[i]->minSize && size <= groups[i]->maxSize)
+            return i;
+    }
+    return -1;
 }
 
 static KDNode* buildTreeParallel(point** points, size_t size, u16 depth)
