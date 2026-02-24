@@ -116,7 +116,6 @@ KDGroup** logStarDecompose(KDTree* tree)
             return NULL;
         }
 
-        groups[i]->groupId = i;
         groups[i]->rootNodes = NULL;
         groups[i]->count = 0;
         groups[i]->minSize = (i == 0) ? 0 : pow(2, pow(2, i - 1));
