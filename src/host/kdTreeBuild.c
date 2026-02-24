@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <math.h>
+#include <stdbool.h>
 #include <string.h>
 #include <omp.h>
 
@@ -21,8 +22,10 @@ static void freeLeafNode(KDNode* node);
 static void attachSubtree(KDNode* sketch, int bucketId, KDNode* subtree);
 static int compareByDim(const void* a, const void* b, void* dim);
 static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols);
+static void freeKDTree(KDNode* node);
+static void freeMatrix(void** matrix, size_t rows);
 
-// fix ints, manage malloc and **
+// fix ints, manage malloc
 
 KDTree* onChipBuild(point** points, size_t size)
 {
@@ -53,6 +56,8 @@ static KDNode* buildTreeParallel(point** points, size_t size, int depth)
 
     size_t sampleCount = CHUNK_SIZE * OVERSAMPLING_RATE;
     point** samples = (point**)malloc(sampleCount * sizeof(point*));
+    if(!samples)
+        return NULL;
 
     #pragma omp parallel for
     for(size_t i = 0; i < sampleCount; ++i)
@@ -66,6 +71,11 @@ static KDNode* buildTreeParallel(point** points, size_t size, int depth)
     free(samples);
 
     Bucket* buckets = sievePoints(points, size, sketch);
+    if(!buckets)
+    {
+        freeKDTree(sketch);
+        return NULL;
+    }
 
     #pragma omp parallel for
     for(size_t i = 0; i < CHUNK_SIZE; ++i)
@@ -86,6 +96,8 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
     size_t numChunks = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
     u32** countMatrix = (u32**)malloc(numChunks * sizeof(u32*));
+    if(!countMatrix)
+        return NULL;
 
     #pragma omp parallel for
     for(size_t i = 0; i < numChunks; ++i)
@@ -103,12 +115,32 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
     }
 
     u32** offsetMatrix = computePrefixSum(countMatrix, numChunks, CHUNK_SIZE);
+    if(!offsetMatrix)
+    {
+        freeMatrix((void**)countMatrix, numChunks);
+        return NULL;
+    }
 
     u32* bucketOffsets = (u32*)malloc(CHUNK_SIZE * sizeof(u32));
+
+    if(!bucketOffsets)
+    {
+        freeMatrix((void**)countMatrix, numChunks);
+        freeMatrix((void**)offsetMatrix, numChunks);
+        return NULL;
+    }
+
     for(size_t j = 0; j < CHUNK_SIZE; ++j)
         bucketOffsets[j] = offsetMatrix[0][j];
 
     point** sortedPoints = (point**)malloc(size * sizeof(point*));
+    if(!sortedPoints)
+    {
+        free(bucketOffsets);
+        freeMatrix((void**)countMatrix, numChunks);
+        freeMatrix((void**)offsetMatrix, numChunks);
+        return NULL;
+    }
 
     #pragma omp parallel for
     for(size_t i = 0; i < numChunks; ++i)
@@ -129,6 +161,15 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 
     Bucket* buckets = (Bucket*)malloc(CHUNK_SIZE * sizeof(Bucket));
 
+    if(!buckets)
+    {
+        free(sortedPoints);
+        free(bucketOffsets);
+        freeMatrix((void**)countMatrix, numChunks);
+        freeMatrix((void**)offsetMatrix, numChunks);
+        return NULL;
+    }
+
     for(size_t j = 0; j < CHUNK_SIZE; ++j)
     {
         size_t start = bucketOffsets[j];
@@ -141,14 +182,8 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
     free(sortedPoints);
     free(bucketOffsets);
 
-    for(size_t i = 0; i < numChunks; ++i)
-    {
-        free(countMatrix[i]);
-        free(offsetMatrix[i]);
-    }
-
-    free(countMatrix);
-    free(offsetMatrix);
+    freeMatrix((void**)countMatrix, numChunks);
+    freeMatrix((void**)offsetMatrix, numChunks);
 
     return buckets;
 }
@@ -183,8 +218,23 @@ static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int 
 
     size_t leftCount = 0;
     size_t rightCount = 0;
+
     point** leftSamples = (point**)malloc(sampleCount * sizeof(point*));
+    if(!leftSamples)
+    {
+        free(*root);
+        *root = NULL;
+        return;
+    }
+
     point** rightSamples = (point**)malloc(sampleCount * sizeof(point*));
+    if(!rightSamples)
+    {
+        free(leftSamples);
+        free(*root);
+        *root = NULL;
+        return;
+    }
 
     for(size_t i = 0; i < sampleCount; ++i)
     {
@@ -196,6 +246,21 @@ static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int 
 
     buildSketch(&(*root)->data.internal.left, leftSamples, leftCount, levels - 1);
     buildSketch(&(*root)->data.internal.right, rightSamples, rightCount, levels - 1);
+
+    if((leftCount > 0 && !(*root)->data.internal.left) || (rightCount > 0 && !(*root)->data.internal.right))
+    {
+        if((*root)->data.internal.left)
+            freeKDTree((*root)->data.internal.left);
+
+        if((*root)->data.internal.right)
+            freeKDTree((*root)->data.internal.right);
+
+        free(leftSamples);
+        free(rightSamples);
+        free(*root);
+        *root = NULL;
+        return;
+    }
 
     if((*root)->data.internal.left)
         (*root)->data.internal.left->parent = *root;
@@ -327,7 +392,15 @@ static size_t parallelPartition(point** points, size_t start, size_t end, int di
     size_t size = end - start + 1;
 
     point** left = (point**)malloc(size * sizeof(point*));
+    if(!left)
+        return start;
+
     point** right = (point**)malloc(size * sizeof(point*));
+    if(!right)
+    {
+        free(left);
+        return start;
+    }
 
     size_t leftCount = 0;
     size_t rightCount = 0;
@@ -363,6 +436,11 @@ static KDNode* createLeafNode(point** points, size_t size)
     leaf->parent = NULL;
 
     leaf->data.leaf.points = (point*)malloc(size * sizeof(point));
+    if(!leaf->data.leaf.points)
+    {
+        free(leaf);
+        return NULL;
+    }
 
     for(size_t i = 0; i < size; ++i)
         leaf->data.leaf.points[i] = *points[i];
@@ -448,9 +526,19 @@ static int compareByDim(const void* a, const void* b, void* dim)
 static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols)
 {
     u32** transposed = (u32**)malloc(cols * sizeof(u32*));
+    if(!transposed)
+        return NULL;
+
     for(size_t j = 0; j < cols; ++j)
     {
         transposed[j] = (u32*)malloc(rows * sizeof(u32));
+
+        if(!transposed[j])
+        {
+            freeMatrix((void**)transposed, j);
+            return NULL;
+        }
+
         for(size_t i = 0; i < rows; ++i)
             transposed[j][i] = matrix[i][j];
     }
@@ -469,12 +557,19 @@ static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols)
 
     u32* columnPrefixSums = (u32*)calloc(cols + 1, sizeof(u32));
 
+    if(!columnPrefixSums)
+    {
+        freeMatrix((void**)transposed, cols);
+        return NULL;
+    }
+
     u32 total = 0;
     for(size_t j = 0; j < cols; ++j)
     {
         columnPrefixSums[j] = total;
         total += transposed[j][rows - 1] + matrix[rows - 1][j];
     }
+
     columnPrefixSums[cols] = total;
 
     #pragma omp parallel for
@@ -486,18 +581,75 @@ static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols)
     }
 
     u32** result = (u32**)malloc(rows * sizeof(u32*));
+    if(!result)
+    {
+        free(columnPrefixSums);
+        freeMatrix((void**)transposed, cols);
+        return NULL;
+    }
+
+    bool error = false;
     #pragma omp parallel for
     for(size_t i = 0; i < rows; ++i)
     {
         result[i] = (u32*)malloc(cols * sizeof(u32));
+
+        if(!result[i])
+        {
+            #pragma omp critical
+            error = true;
+            continue;
+        }
+
         for(size_t j = 0; j < cols; ++j)
             result[i][j] = transposed[j][i];
     }
 
+    if(error)
+    {
+        freeMatrix((void**)result, rows);
+        free(columnPrefixSums);
+        freeMatrix((void**)transposed, cols);
+        return NULL;
+    }
+
     free(columnPrefixSums);
-    for(size_t j = 0; j < cols; ++j)
-        free(transposed[j]);
-    free(transposed);
+    freeMatrix((void**)transposed, cols);
 
     return result;
+}
+
+static void freeKDTree(KDNode* node)
+{
+    if(!node)
+        return;
+
+    if(node->type == INTERNAL)
+    {
+        freeKDTree(node->data.internal.left);
+        freeKDTree(node->data.internal.right);
+    }
+    else
+    {
+        if(node->data.leaf.points)
+        {
+            free(node->data.leaf.points);
+            node->data.leaf.points = NULL;
+        }
+    }
+
+    free(node);
+}
+
+static void freeMatrix(void** matrix, size_t rows)
+{
+    if(!matrix)
+        return;
+
+    for(size_t i = 0; i < rows; ++i)
+    {
+        if(matrix[i])
+            free(matrix[i]);
+    }
+    free(matrix);
 }
