@@ -11,6 +11,6 @@ typedef struct Bucket
 
 KDTree* onChipBuild(point** points, size_t size);
 KDGroup** logStarDecompose(KDTree* tree);
-KDTree* replicate(KDTree* tree, KDGroup** groups)
+KDTree* replicate(KDTree* original, KDGroup** groups);
 
 #endif
