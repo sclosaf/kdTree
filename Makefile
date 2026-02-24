@@ -4,7 +4,7 @@ DPU_INCLUDE_DIRS =
 
 CC_HOST      = gcc
 CFLAGS_HOST  = -O3 -Wall -fopenmp -D_GNU_SOURCE -Iinclude $(addprefix -I, $(HOST_INCLUDE_DIRS))
-LDFLAGS_HOST = -fopenmp -ldpu
+LDFLAGS_HOST = -fopenmp -ldpu -lm
 
 CC_DPU       = dpu-upmem-dpurte-clang
 CFLAGS_DPU   = -O2 -Iinclude $(addprefix -I, $(DPU_INCLUDE_DIRS))
