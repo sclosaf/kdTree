@@ -1,5 +1,4 @@
 HOST_INCLUDE_DIRS = /usr/include /usr/include/dpu
-
 DPU_INCLUDE_DIRS =
 
 CC_HOST      = gcc
@@ -16,11 +15,11 @@ BUILD_DIR    = build
 HOST_BUILD   = $(BUILD_DIR)/host
 DPU_BUILD    = $(BUILD_DIR)/dpu
 
-HOST_SRCS    = $(wildcard src/host/*.c)
-DPU_SRCS     = $(wildcard src/dpu/*.c)
+HOST_SRCS    = $(shell find src/host -name "*.c")
+DPU_SRCS     = $(shell find src/dpu -name "*.c")
 
-HOST_OBJS    = $(patsubst src/host/%.c,$(HOST_BUILD)/%.o,$(HOST_SRCS))
-DPU_OBJS     = $(patsubst src/dpu/%.c,$(DPU_BUILD)/%.o,$(DPU_SRCS))
+HOST_OBJS    = $(patsubst src/%.c,$(HOST_BUILD)/%.o,$(HOST_SRCS))
+DPU_OBJS     = $(patsubst src/%.c,$(DPU_BUILD)/%.o,$(DPU_SRCS))
 
 HOST_TARGET  = $(BUILD_DIR)/$(TARGET_HOST)
 DPU_TARGET   = $(BUILD_DIR)/$(DPU_PROGRAM).dpu
@@ -28,13 +27,15 @@ DPU_TARGET   = $(BUILD_DIR)/$(DPU_PROGRAM).dpu
 $(HOST_BUILD) $(DPU_BUILD):
 	mkdir -p $@
 
-all: $(HOST_TARGET) $(DPU_TARGET)
-
-$(HOST_BUILD)/%.o: src/host/%.c | $(HOST_BUILD)
+$(HOST_BUILD)/%.o: src/%.c
+	@mkdir -p $(dir $@)
 	$(CC_HOST) $(CFLAGS_HOST) -c $< -o $@
 
-$(DPU_BUILD)/%.o: src/dpu/%.c | $(DPU_BUILD)
+$(DPU_BUILD)/%.o: src/%.c
+	@mkdir -p $(dir $@)
 	$(CC_DPU) $(CFLAGS_DPU) -c $< -o $@
+
+all: $(HOST_TARGET) $(DPU_TARGET)
 
 $(HOST_TARGET): $(HOST_OBJS)
 	$(CC_HOST) -o $@ $^ $(LDFLAGS_HOST)
