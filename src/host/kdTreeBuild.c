@@ -9,17 +9,17 @@
 #include "utils/constants.h"
 #include "utils/types.h"
 
-static KDNode* buildTreeParallel(point** points, size_t size, int depth);
+static KDNode* buildTreeParallel(point** points, size_t size, u16 depth);
 static Bucket* sievePoints(point** points, size_t size, KDNode* sketch);
-static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int level);
+static void buildSketch(KDNode** root, point** samples, size_t sampleCount, u16 level);
 static u32 getBucket(KDNode* sketch, point* p);
-static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, int depth);
-static f32 findMedian(point** points, size_t start, size_t end, int dim);
-static int findSplitDim(point** points, size_t start, size_t end);
-static size_t parallelPartition(point** points, size_t start, size_t end, int dim, f32 pivot);
+static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, u16 depth);
+static f32 findMedian(point** points, size_t start, size_t end, u8 dim);
+static u8 findSplitDim(point** points, size_t start, size_t end);
+static size_t parallelPartition(point** points, size_t start, size_t end, u8 dim, f32 pivot);
 static KDNode* createLeafNode(point** points, size_t size);
 static void freeLeafNode(KDNode* node);
-static void attachSubtree(KDNode* sketch, int bucketId, KDNode* subtree);
+static void attachSubtree(KDNode* sketch, u16 bucketId, KDNode* subtree);
 static int compareByDim(const void* a, const void* b, void* dim);
 static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols);
 static void freeKDTree(KDNode* node);
@@ -49,7 +49,7 @@ KDTree* onChipBuild(point** points, size_t size)
     return tree;
 }
 
-static KDNode* buildTreeParallel(point** points, size_t size, int depth)
+static KDNode* buildTreeParallel(point** points, size_t size, u16 depth)
 {
     if(size <= LEAF_WRAP_THRESHOLD)
         return createLeafNode(points, size);
@@ -62,7 +62,7 @@ static KDNode* buildTreeParallel(point** points, size_t size, int depth)
     #pragma omp parallel for
     for(size_t i = 0; i < sampleCount; ++i)
     {
-        int index = rand() % size;
+        size_t index = rand() % size;
         samples[i] = points[index];
     }
 
@@ -188,7 +188,7 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
     return buckets;
 }
 
-static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int levels)
+static void buildSketch(KDNode** root, point** samples, size_t sampleCount, u16 levels)
 {
     if(levels == 0 || sampleCount <= LEAF_WRAP_THRESHOLD)
     {
@@ -208,7 +208,7 @@ static void buildSketch(KDNode** root, point** samples, size_t sampleCount, int 
     if(!*root)
         return;
 
-    int splitDim = findSplitDim(samples, 0, sampleCount - 1);
+    u8 splitDim = findSplitDim(samples, 0, sampleCount - 1);
     f32 splitValue = findMedian(samples, 0, sampleCount - 1, splitDim);
 
     (*root)->type = INTERNAL;
@@ -276,7 +276,7 @@ static u32 getBucket(KDNode* sketch, point* p)
 {
     u32 id = 0;
     KDNode* current = sketch;
-    int level = 0;
+    u16 level = 0;
 
     while(current && level < SKETCH_HEIGHT && current->type != LEAF)
     {
@@ -297,7 +297,7 @@ static u32 getBucket(KDNode* sketch, point* p)
     return id;
 }
 
-static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, int depth)
+static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, u16 depth)
 {
     size_t size = end - start + 1;
 
@@ -308,7 +308,7 @@ static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, 
     if(!node)
         return NULL;
 
-    int splitDim = findSplitDim(points, start, end);
+    u8 splitDim = findSplitDim(points, start, end);
     f32 splitValue = findMedian(points, start, end, splitDim);
 
     node->type = INTERNAL;
@@ -337,7 +337,7 @@ static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, 
     return node;
 }
 
-static f32 findMedian(point** points, size_t start, size_t end, int dim)
+static f32 findMedian(point** points, size_t start, size_t end, u8 dim)
 {
     size_t size = end - start + 1;
     size_t mid = start + size / 2;
@@ -347,7 +347,7 @@ static f32 findMedian(point** points, size_t start, size_t end, int dim)
     return points[mid]->coords[dim];
 }
 
-static int findSplitDim(point** points, size_t start, size_t end)
+static u8 findSplitDim(point** points, size_t start, size_t end)
 {
     f32 minCoords[DIMENSIONS], maxCoords[DIMENSIONS];
 
@@ -370,7 +370,7 @@ static int findSplitDim(point** points, size_t start, size_t end)
         }
     }
 
-    int splitDim = 0;
+    u8 splitDim = 0;
     f32 maxRange = maxCoords[0] - minCoords[0];
 
     for(size_t i = 1; i < DIMENSIONS; ++i)
@@ -387,7 +387,7 @@ static int findSplitDim(point** points, size_t start, size_t end)
     return splitDim;
 }
 
-static size_t parallelPartition(point** points, size_t start, size_t end, int dim, f32 pivot)
+static size_t parallelPartition(point** points, size_t start, size_t end, u8 dim, f32 pivot)
 {
     size_t size = end - start + 1;
 
@@ -464,53 +464,46 @@ static void freeLeafNode(KDNode* node)
     }
 }
 
-static void attachSubtree(KDNode* sketch, int bucketId, KDNode* subtree)
+static void attachSubtree(KDNode* sketch, u16 bucketId, KDNode* subtree)
 {
-    if(!sketch || bucketId < 0 || bucketId >= CHUNK_SIZE)
+    if(!sketch || bucketId >= CHUNK_SIZE)
         return;
 
     KDNode* current = sketch;
-    int level = SKETCH_HEIGHT - 1;
-
-    while(level >= 0)
+    for(u16 level = SKETCH_HEIGHT - 1; level > 0; level--)
     {
-        int bit = (bucketId >> level) & 1;
+        bool bit = (bucketId >> level) & 1;
 
-        if(level == 0)
-        {
-            if(bit == 0)
-            {
-                if(current->data.internal.left)
-                    freeLeafNode(current->data.internal.left);
-
-                current->data.internal.left = subtree;
-            }
-            else
-            {
-                if(current->data.internal.right)
-                    freeLeafNode(current->data.internal.right);
-
-                current->data.internal.right = subtree;
-            }
-
-            if(subtree)
-                subtree->parent = current;
-        }
+        if(bit == 0)
+            current = current->data.internal.left;
         else
-        {
-            if(bit == 0)
-                current = current->data.internal.left;
-            else
-                current = current->data.internal.right;
-        }
-
-        level--;
+            current = current->data.internal.right;
     }
+
+    bool bit = bucketId & 1;
+
+    if(bit == 0)
+    {
+        if(current->data.internal.left)
+            freeLeafNode(current->data.internal.left);
+
+        current->data.internal.left = subtree;
+    }
+    else
+    {
+        if(current->data.internal.right)
+            freeLeafNode(current->data.internal.right);
+
+        current->data.internal.right = subtree;
+    }
+
+    if(subtree)
+        subtree->parent = current;
 }
 
 static int compareByDim(const void* a, const void* b, void* dim)
 {
-    int d = *(int*)dim;
+    u8 d = *(u8*)dim;
     point* pa = *(point**)a;
     point* pb = *(point**)b;
 
