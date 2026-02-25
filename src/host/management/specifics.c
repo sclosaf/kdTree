@@ -20,13 +20,6 @@ void printInfoSystem()
     printf("Total DPUs: %u\n", nr_dpus);
     printf("Total ranks: %u\n", nr_ranks);
 
-    DPU_RANK_FOREACH(dpu_set, rank)
-    {
-        uint32_t per_rank;
-        DPU_ASSERT(dpu_get_nr_dpus(rank, &per_rank));
-        printf("Rank %u: %u DPUs\n", rank_id++, per_rank);
-    }
-
     DPU_FOREACH(dpu_set, dpu)
     {
         printf("DPU %u present\n", dpu_id);
