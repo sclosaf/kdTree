@@ -63,6 +63,6 @@ typedef struct KDTree
 
     size_t totalPoints;
     uint16_t totalNodes;
-} KDTree;int16_t#endif
+} KDTree;
 
 #endif

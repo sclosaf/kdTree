@@ -20,7 +20,7 @@ static size_t calculateSubtreeSize(KDNode* node);
 static int16_t findGroup(size_t size, KDGroup** groups, uint8_t numGroups);
 
 static void copyNode(KDNode* dest, KDNode* src);
-static KDNode* buildReplicatedTree(KDGroup** groups, uint_8 groupLevel);
+static KDNode* buildReplicatedTree(KDGroup** groups, uint8_t groupLevel);
 
 static KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth);
 static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, uint16_t depth);
@@ -309,14 +309,14 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 {
     size_t numChunks = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
-    uint32_t** countMatrix = (u32**)malloc(numChunks * sizeof(u32*));
+    uint32_t** countMatrix = (uint32_t**)malloc(numChunks * sizeof(u32*));
     if(!countMatrix)
         return NULL;
 
     #pragma omp parallel for
     for(size_t i = 0; i < numChunks; ++i)
     {
-        countMatrix[i] = (u32*)calloc(CHUNK_SIZE, sizeof(u32));
+        countMatrix[i] = (uint32_t*)calloc(CHUNK_SIZE, sizeof(u32));
 
         size_t chunkStart = i * CHUNK_SIZE;
         size_t chunkEnd = (chunkStart + CHUNK_SIZE < size) ? (chunkStart + CHUNK_SIZE) : size;
@@ -335,7 +335,7 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
         return NULL;
     }
 
-    uint32_t* bucketOffsets = (u32*)malloc(CHUNK_SIZE * sizeof(u32));
+    uint32_t* bucketOffsets = (uint32_t*)malloc(CHUNK_SIZE * sizeof(u32));
 
     if(!bucketOffsets)
     {
@@ -732,13 +732,13 @@ static int compareByDim(const void* a, const void* b, void* dim)
 
 static uint32_t** computePrefixSum(uint32_t** matrix, size_t rows, size_t cols)
 {
-    uint32_t** transposed = (uint32_t**)malloc(cols * sizeof(u32*));
+    uint32_t** transposed = (uint32_t**)malloc(cols * sizeof(uint32_t*));
     if(!transposed)
         return NULL;
 
     for(size_t j = 0; j < cols; ++j)
     {
-        transposed[j] = (u32*)malloc(rows * sizeof(u32));
+        transposed[j] = (uint32_t*)malloc(rows * sizeof(uint32_t));
 
         if(!transposed[j])
         {
@@ -787,7 +787,7 @@ static uint32_t** computePrefixSum(uint32_t** matrix, size_t rows, size_t cols)
             transposed[j][i] += colOffset;
     }
 
-    uint32_t** result = (uint32_t**)malloc(rows * sizeof(u32*));
+    uint32_t** result = (uint32_t**)malloc(rows * sizeof(uint32_t*));
     if(!result)
     {
         free(columnPrefixSums);
