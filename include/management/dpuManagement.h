@@ -2,33 +2,32 @@
 #define DPUMANAGEMENT_H
 
 #include <dpu.h>
-#include "utils/types.h"
 
 typedef struct
 {
     struct dpu_set_t set;
-    u32 nDpus;
-    u32 nRanks;
-    u32 currentDpuId;
+    uint32_t nDpus;
+    uint32_t nRanks;
+    uint32_t currentDpuId;
 } DPUContext;
 
 typedef struct
 {
-    u32 totalPoints;
-    u32 pointsPerDpu;
-    u32 dim;
-    f32 alpha;
-    f32 beta;
-    u64 baseAddress;
+    uint32_t totalPoints;
+    uint32_t pointsPerDpu;
+    uint32_t dim;
+    float alpha;
+    float beta;
+    uint64_t baseAddress;
 } DPUKernelArgs;
 
-DPUContext* dpuInitContext(u32 nDpus);
+DPUContext* dpuInitContext(uint32_t nDpus);
 void dpuCleanupContext(DPUContext* ctx);
 
-int dpuLaunchSpecificDpu(DPUContext* ctx, u32 dpuId, const char* path, DPUKernelArgs* args);
+int dpuLaunchSpecificDpu(DPUContext* ctx, uint32_t dpuId, const char* path, DPUKernelArgs* args);
 int dpuLaunchAllDpus(DPUContext* ctx, const char* path, DPUKernelArgs* args);
 
-int dpuTransferDataToDpu(DPUContext* ctx, u32 dpuId, void* data, size_t size, dpu_xfer_flags_t flags);
-int dpuTransferDataFromDpu(DPUContext* ctx, u32 dpuId, void* data, size_t size, dpu_xfer_flags_t flags);
+int dpuTransferDataToDpu(DPUContext* ctx, uint32_t dpuId, void* data, size_t size, dpu_xfer_flags_t flags);
+int dpuTransferDataFromDpu(DPUContext* ctx, uint32_t dpuId, void* data, size_t size, dpu_xfer_flags_t flags);
 
 #endif

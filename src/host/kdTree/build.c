@@ -8,7 +8,6 @@
 #include "kdTree/build.h"
 
 #include "utils/constants.h"
-#include "utils/types.h"
 
 typedef struct Bucket
 {
@@ -16,30 +15,30 @@ typedef struct Bucket
     size_t size;
 } Bucket;
 
-static void assignNodesToGroups(KDNode* node, KDGroup** groups, u8 numGroups);
+static void assignNodesToGroups(KDNode* node, KDGroup** groups, uint8_t numGroups);
 static size_t calculateSubtreeSize(KDNode* node);
-static i16 findGroup(size_t size, KDGroup** groups, u8 numGroups);
+static int16_t findGroup(size_t size, KDGroup** groups, uint8_t numGroups);
 
 static void copyNode(KDNode* dest, KDNode* src);
-static KDNode* buildReplicatedTree(KDGroup** groups, u8 groupLevel);
+static KDNode* buildReplicatedTree(KDGroup** groups, uint_8 groupLevel);
 
-static KDNode* buildTreeParallel(point** points, size_t size, u16 depth);
-static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, u16 depth);
-static void buildSketch(KDNode** root, point** samples, size_t sampleCount, u16 level);
+static KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth);
+static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, uint16_t depth);
+static void buildSketch(KDNode** root, point** samples, size_t sampleCount, uint16_t level);
 static Bucket* sievePoints(point** points, size_t size, KDNode* sketch);
 
-static u32 getBucket(KDNode* sketch, point* p);
+static uint32_t getBucket(KDNode* sketch, point* p);
 
-static f32 findMedian(point** points, size_t start, size_t end, u8 dim);
-static u8 findSplitDim(point** points, size_t start, size_t end);
-static size_t parallelPartition(point** points, size_t start, size_t end, u8 dim, f32 pivot);
+static float findMedian(point** points, size_t start, size_t end, uint8_t dim);
+static uint8_t findSplitDim(point** points, size_t start, size_t end);
+static size_t parallelPartition(point** points, size_t start, size_t end, uint8_t dim, float pivot);
 
 static KDNode* createLeafNode(point** points, size_t size);
 static void freeLeafNode(KDNode* node);
 
 static void attachSubtree(KDNode* sketch, u16 bucketId, KDNode* subtree);
 static int compareByDim(const void* a, const void* b, void* dim);
-static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols);
+static uint32_t** computePrefixSum(uint32_t** matrix, size_t rows, size_t cols);
 
 static void freeKDTree(KDNode* node);
 static void freeMatrix(void** matrix, size_t rows);
@@ -98,7 +97,7 @@ KDGroup** logStarDecompose(KDTree* tree)
         return NULL;
 
     size_t totalSize = tree->totalPoints;
-    u8 numGroups = 0;
+    uint8_t numGroups = 0;
 
     size_t current = totalSize;
     while(current > LEAF_WRAP_THRESHOLD)
@@ -134,7 +133,7 @@ KDGroup** logStarDecompose(KDTree* tree)
     return groups;
 }
 
-static void assignNodesToGroups(KDNode* node, KDGroup** groups, u8 numGroups)
+static void assignNodesToGroups(KDNode* node, KDGroup** groups, uint8_t numGroups)
 {
     if(!node)
         return;
@@ -143,7 +142,7 @@ static void assignNodesToGroups(KDNode* node, KDGroup** groups, u8 numGroups)
     {
         size_t subtreeSize = calculateSubtreeSize(node);
 
-        i16 groupId = findGroup(subtreeSize, groups, numGroups);
+        int16_t groupId = findGroup(subtreeSize, groups, numGroups);
 
         if(groupId >= 0)
         {
@@ -167,13 +166,12 @@ static size_t calculateSubtreeSize(KDNode* node)
     return calculateSubtreeSize(node->data.internal.left) + calculateSubtreeSize(node->data.internal.right);
 }
 
-static i16 findGroup(size_t size, KDGroup** groups, u8 numGroups)
+static int16_t findGroup(size_t size, KDGroup** groups, uint8_t numGroups)
 {
     for(int i = 0; i < numGroups; ++i)
-    {
         if(size > groups[i]->minSize && size <= groups[i]->maxSize)
             return i;
-    }
+
     return -1;
 }
 
@@ -194,9 +192,9 @@ KDTree* replicate(KDTree* original, KDGroup** groups)
     return newTree;
 }
 
-static KDNode* buildReplicatedTree(KDGroup** groups, u8 groupLevel)
+static KDNode* buildReplicatedTree(KDGroup** groups, uint8_t groupLevel)
 {
-    u8 currentLevel = groupLevel;
+    uint8_t currentLevel = groupLevel;
     while(groups[currentLevel] != NULL && groups[currentLevel]->count == 0)
         currentLevel++;
 
@@ -265,7 +263,7 @@ static void copyNode(KDNode* dest, KDNode* src)
 }
 
 
-static KDNode* buildTreeParallel(point** points, size_t size, u16 depth)
+static KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth)
 {
     if(size <= LEAF_WRAP_THRESHOLD)
         return createLeafNode(points, size);
@@ -311,7 +309,7 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 {
     size_t numChunks = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
-    u32** countMatrix = (u32**)malloc(numChunks * sizeof(u32*));
+    uint32_t** countMatrix = (u32**)malloc(numChunks * sizeof(u32*));
     if(!countMatrix)
         return NULL;
 
@@ -325,19 +323,19 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 
         for(size_t j = chunkStart; j < chunkEnd; ++j)
         {
-            u32 bucketId = getBucket(sketch, points[j]);
+            uint32_t bucketId = getBucket(sketch, points[j]);
             ++countMatrix[i][bucketId];
         }
     }
 
-    u32** offsetMatrix = computePrefixSum(countMatrix, numChunks, CHUNK_SIZE);
+    uint32_t** offsetMatrix = computePrefixSum(countMatrix, numChunks, CHUNK_SIZE);
     if(!offsetMatrix)
     {
         freeMatrix((void**)countMatrix, numChunks);
         return NULL;
     }
 
-    u32* bucketOffsets = (u32*)malloc(CHUNK_SIZE * sizeof(u32));
+    uint32_t* bucketOffsets = (u32*)malloc(CHUNK_SIZE * sizeof(u32));
 
     if(!bucketOffsets)
     {
@@ -366,8 +364,8 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 
         for(size_t j = chunkStart; j < chunkEnd; ++j)
         {
-            u32 bucketId = getBucket(sketch, points[j]);
-            u32 index = offsetMatrix[i][bucketId];
+            uint32_t bucketId = getBucket(sketch, points[j]);
+            uint32_t index = offsetMatrix[i][bucketId];
             sortedPoints[index] = points[j];
             ++offsetMatrix[i][bucketId];
         }
@@ -404,7 +402,7 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
     return buckets;
 }
 
-static void buildSketch(KDNode** root, point** samples, size_t sampleCount, u16 levels)
+static void buildSketch(KDNode** root, point** samples, size_t sampleCount, uint16_t levels)
 {
     if(levels == 0 || sampleCount <= LEAF_WRAP_THRESHOLD)
     {
@@ -424,8 +422,8 @@ static void buildSketch(KDNode** root, point** samples, size_t sampleCount, u16 
     if(!*root)
         return;
 
-    u8 splitDim = findSplitDim(samples, 0, sampleCount - 1);
-    f32 splitValue = findMedian(samples, 0, sampleCount - 1, splitDim);
+    uint8_t splitDim = findSplitDim(samples, 0, sampleCount - 1);
+    float splitValue = findMedian(samples, 0, sampleCount - 1, splitDim);
 
     (*root)->type = INTERNAL;
     (*root)->data.internal.splitDim = splitDim;
@@ -488,11 +486,11 @@ static void buildSketch(KDNode** root, point** samples, size_t sampleCount, u16 
     free(rightSamples);
 }
 
-static u32 getBucket(KDNode* sketch, point* p)
+static uint32_t getBucket(KDNode* sketch, point* p)
 {
-    u32 id = 0;
+    uint32_t id = 0;
     KDNode* current = sketch;
-    u16 level = 0;
+    uint16_t level = 0;
 
     while(current && level < SKETCH_HEIGHT && current->type != LEAF)
     {
@@ -513,7 +511,7 @@ static u32 getBucket(KDNode* sketch, point* p)
     return id;
 }
 
-static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, u16 depth)
+static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, uint16_t depth)
 {
     size_t size = end - start + 1;
 
@@ -524,8 +522,8 @@ static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, 
     if(!node)
         return NULL;
 
-    u8 splitDim = findSplitDim(points, start, end);
-    f32 splitValue = findMedian(points, start, end, splitDim);
+    uint8_t splitDim = findSplitDim(points, start, end);
+    float splitValue = findMedian(points, start, end, splitDim);
 
     node->type = INTERNAL;
     node->parent = NULL;
@@ -553,7 +551,7 @@ static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, 
     return node;
 }
 
-static f32 findMedian(point** points, size_t start, size_t end, u8 dim)
+static float findMedian(point** points, size_t start, size_t end, uint8_t dim)
 {
     size_t size = end - start + 1;
     size_t mid = start + size / 2;
@@ -563,9 +561,9 @@ static f32 findMedian(point** points, size_t start, size_t end, u8 dim)
     return points[mid]->coords[dim];
 }
 
-static u8 findSplitDim(point** points, size_t start, size_t end)
+static uint8_t findSplitDim(point** points, size_t start, size_t end)
 {
-    f32 minCoords[DIMENSIONS], maxCoords[DIMENSIONS];
+    float minCoords[DIMENSIONS], maxCoords[DIMENSIONS];
 
     for(size_t i = 0; i < DIMENSIONS; ++i)
     {
@@ -577,7 +575,7 @@ static u8 findSplitDim(point** points, size_t start, size_t end)
     {
         for(size_t j = 0; j < DIMENSIONS; ++j)
         {
-            f32 val = points[i]->coords[j];
+            float val = points[i]->coords[j];
             if(val < minCoords[j])
                 minCoords[j] = val;
 
@@ -586,12 +584,12 @@ static u8 findSplitDim(point** points, size_t start, size_t end)
         }
     }
 
-    u8 splitDim = 0;
-    f32 maxRange = maxCoords[0] - minCoords[0];
+    uint8_t splitDim = 0;
+    float maxRange = maxCoords[0] - minCoords[0];
 
     for(size_t i = 1; i < DIMENSIONS; ++i)
     {
-        f32 range = maxCoords[i] - minCoords[i];
+        float range = maxCoords[i] - minCoords[i];
 
         if(range > maxRange)
         {
@@ -603,7 +601,7 @@ static u8 findSplitDim(point** points, size_t start, size_t end)
     return splitDim;
 }
 
-static size_t parallelPartition(point** points, size_t start, size_t end, u8 dim, f32 pivot)
+static size_t parallelPartition(point** points, size_t start, size_t end, uint8_t dim, float pivot)
 {
     size_t size = end - start + 1;
 
@@ -680,13 +678,13 @@ static void freeLeafNode(KDNode* node)
     }
 }
 
-static void attachSubtree(KDNode* sketch, u16 bucketId, KDNode* subtree)
+static void attachSubtree(KDNode* sketch, uint16_t bucketId, KDNode* subtree)
 {
     if(!sketch || bucketId >= CHUNK_SIZE)
         return;
 
     KDNode* current = sketch;
-    for(u16 level = SKETCH_HEIGHT - 1; level > 0; level--)
+    for(uint16_t level = SKETCH_HEIGHT - 1; level > 0; level--)
     {
         bool bit = (bucketId >> level) & 1;
 
@@ -719,7 +717,7 @@ static void attachSubtree(KDNode* sketch, u16 bucketId, KDNode* subtree)
 
 static int compareByDim(const void* a, const void* b, void* dim)
 {
-    u8 d = *(u8*)dim;
+    uint8_t d = *(uint8_t*)dim;
     point* pa = *(point**)a;
     point* pb = *(point**)b;
 
@@ -732,9 +730,9 @@ static int compareByDim(const void* a, const void* b, void* dim)
     return 0;
 }
 
-static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols)
+static uint32_t** computePrefixSum(uint32_t** matrix, size_t rows, size_t cols)
 {
-    u32** transposed = (u32**)malloc(cols * sizeof(u32*));
+    uint32_t** transposed = (uint32_t**)malloc(cols * sizeof(u32*));
     if(!transposed)
         return NULL;
 
@@ -755,16 +753,16 @@ static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols)
     #pragma omp parallel for
     for(size_t j = 0; j < cols; ++j)
     {
-        u32 sum = 0;
+        uint32_t sum = 0;
         for(size_t i = 0; i < rows; ++i)
         {
-            u32 current_val = transposed[j][i];
+            uint32_t current_val = transposed[j][i];
             transposed[j][i] = sum;
             sum += current_val;
         }
     }
 
-    u32* columnPrefixSums = (u32*)calloc(cols + 1, sizeof(u32));
+    uint32_t* columnPrefixSums = (uint32_t*)calloc(cols + 1, sizeof(u32));
 
     if(!columnPrefixSums)
     {
@@ -772,7 +770,7 @@ static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols)
         return NULL;
     }
 
-    u32 total = 0;
+    uint32_t total = 0;
     for(size_t j = 0; j < cols; ++j)
     {
         columnPrefixSums[j] = total;
@@ -784,12 +782,12 @@ static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols)
     #pragma omp parallel for
     for(size_t j = 0; j < cols; ++j)
     {
-        u32 colOffset = columnPrefixSums[j];
+        uint32_t colOffset = columnPrefixSums[j];
         for(size_t i = 0; i < rows; ++i)
             transposed[j][i] += colOffset;
     }
 
-    u32** result = (u32**)malloc(rows * sizeof(u32*));
+    uint32_t** result = (uint32_t**)malloc(rows * sizeof(u32*));
     if(!result)
     {
         free(columnPrefixSums);
@@ -801,7 +799,7 @@ static u32** computePrefixSum(u32** matrix, size_t rows, size_t cols)
     #pragma omp parallel for
     for(size_t i = 0; i < rows; ++i)
     {
-        result[i] = (u32*)malloc(cols * sizeof(u32));
+        result[i] = (uint32_t*)malloc(cols * sizeof(u32));
 
         if(!result[i])
         {

@@ -1,7 +1,6 @@
 #ifndef COMPONENTS_H
 #define COMPONENTS_H
 
-#include "utils/types.h"
 #include "utils/constants.h"
 
 typedef enum nodeType
@@ -12,15 +11,15 @@ typedef enum nodeType
 
 typedef struct point
 {
-    f32 coords[DIMENSIONS];
+    float coords[DIMENSIONS];
 } point;
 
 // typedef struct KDApproxCounter
 // {
-//     u32 value;
-//     u32 totalTreeSize;
-//     f32 beta;
-//     u32 lastUpdate;
+//     uint32_t value;
+//     uint32_t totalTreeSize;
+//     float beta;
+//     uint32_t lastUpdate;
 // } approxCounter;
 
 typedef struct KDNode
@@ -33,8 +32,8 @@ typedef struct KDNode
     {
         struct
         {
-            u8 splitDim;
-            f32 splitValue;
+            uint8_t splitDim;
+            float splitValue;
 
             struct KDNode* left;
             struct KDNode* right;
@@ -52,8 +51,8 @@ typedef struct KDGroup
     KDNode** rootNodes;
     size_t count;
 
-    f32 minSize;
-    f32 maxSize;
+    float minSize;
+    float maxSize;
 } KDGroup;
 
 typedef struct KDTree
@@ -61,7 +60,5 @@ typedef struct KDTree
     KDNode* root;
 
     size_t totalPoints;
-    u16 totalNodes;
-} KDTree;
-
-#endif
+    uint16_t totalNodes;
+} KDTree;int16_t#endif

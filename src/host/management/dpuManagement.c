@@ -1,6 +1,6 @@
 #include "management/dpuManagement.h"
 
-DPUContext* dpuInitContext(u32 nDpus)
+DPUContext* dpuInitContext(uint32_t nDpus)
 {
     DPUContext* ctx = (DPUContext*)malloc(sizeof(DPUContext));
     if(!ctx)
@@ -24,13 +24,13 @@ void dpuCleanupContext(DPUContext* ctx)
     }
 }
 
-int dpuLaunchSpecificDpu(DPUContext* ctx, u32 dpuId, const char* path, DPUKernelArgs* args)
+int dpuLaunchSpecificDpu(DPUContext* ctx, uint32_t dpuId, const char* path, DPUKernelArgs* args)
 {
     if(!ctx || dpuId >= ctx->nDpus)
         return -1;
 
     struct dpu_set_t dpu;
-    u32 currentId = 0;
+    uint32_t currentId = 0;
     bool found = 0;
 
     DPU_FOREACH(ctx->set, dpu)
@@ -75,13 +75,13 @@ int dpuLaunchAllDpus(DPUContext* ctx, const char* path, DPUKernelArgs* args)
     return 0;
 }
 
-int dpuTransferDataToDpu(DPUContext* ctx, u32 dpuId, void* data, size_t size, dpu_xfer_flags_t flags)
+int dpuTransferDataToDpu(DPUContext* ctx, uint32_t dpuId, void* data, size_t size, dpu_xfer_flags_t flags)
 {
     if(!ctx || dpuId >= ctx->nDpus)
         return -1;
 
     struct dpu_set_t dpu;
-    u32 currentId = 0;
+    uint32_t currentId = 0;
 
     DPU_FOREACH(ctx->set, dpu)
     {
@@ -97,13 +97,13 @@ int dpuTransferDataToDpu(DPUContext* ctx, u32 dpuId, void* data, size_t size, dp
     return -1;
 }
 
-int dpuTransferDataFromDpu(DPUContext* ctx, u32 dpuId, void* data, size_t size, dpu_xfer_flags_t flags)
+int dpuTransferDataFromDpu(DPUContext* ctx, uint32_t dpuId, void* data, size_t size, dpu_xfer_flags_t flags)
 {
     if(!ctx || dpuId>= ctx->nDpus)
         return -1;
 
     struct dpu_set_t dpu;
-    u32 currentId= 0;
+    uint32_t currentId= 0;
 
     DPU_FOREACH(ctx->set, dpu)
     {
