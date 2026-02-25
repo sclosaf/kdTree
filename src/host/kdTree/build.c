@@ -309,7 +309,7 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 {
     size_t numChunks = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
-    uint32_t** countMatrix = (uint32_t**)malloc(numChunks * sizeof(u32*));
+    uint32_t** countMatrix = (uint32_t**)malloc(numChunks * sizeof(uint32_t*));
     if(!countMatrix)
         return NULL;
 
@@ -799,7 +799,7 @@ static uint32_t** computePrefixSum(uint32_t** matrix, size_t rows, size_t cols)
     #pragma omp parallel for
     for(size_t i = 0; i < rows; ++i)
     {
-        result[i] = (uint32_t*)malloc(cols * sizeof(u32));
+        result[i] = (uint32_t*)malloc(cols * sizeof(uint32_t));
 
         if(!result[i])
         {
