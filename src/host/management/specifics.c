@@ -8,7 +8,7 @@
 
 void printInfoSystem()
 {
-    struct dpu_set_t dpu_set, rank, dpu;
+    struct dpu_set_t rank, dpu;
     uint32_t nr_dpus, nr_ranks;
     uint32_t rank_id = 0, dpu_id = 0;
 
