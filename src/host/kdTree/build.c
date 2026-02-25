@@ -335,7 +335,7 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
         return NULL;
     }
 
-    uint32_t* bucketOffsets = (uint32_t*)malloc(CHUNK_SIZE * sizeof(u32));
+    uint32_t* bucketOffsets = (uint32_t*)malloc(CHUNK_SIZE * sizeof(uint32_t));
 
     if(!bucketOffsets)
     {
