@@ -36,7 +36,7 @@ static size_t parallelPartition(point** points, size_t start, size_t end, uint8_
 static KDNode* createLeafNode(point** points, size_t size);
 static void freeLeafNode(KDNode* node);
 
-static void attachSubtree(KDNode* sketch, u16 bucketId, KDNode* subtree);
+static void attachSubtree(KDNode* sketch, uint16_t bucketId, KDNode* subtree);
 static int compareByDim(const void* a, const void* b, void* dim);
 static uint32_t** computePrefixSum(uint32_t** matrix, size_t rows, size_t cols);
 
@@ -762,7 +762,7 @@ static uint32_t** computePrefixSum(uint32_t** matrix, size_t rows, size_t cols)
         }
     }
 
-    uint32_t* columnPrefixSums = (uint32_t*)calloc(cols + 1, sizeof(u32));
+    uint32_t* columnPrefixSums = (uint32_t*)calloc(cols + 1, sizeof(uint32_t));
 
     if(!columnPrefixSums)
     {
