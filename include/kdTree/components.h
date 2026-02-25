@@ -1,5 +1,5 @@
-#ifndef KDTREE_H
-#define KDTREE_H
+#ifndef COMPONENTS_H
+#define COMPONENTS_H
 
 #include "utils/types.h"
 #include "utils/constants.h"
@@ -15,7 +15,7 @@ typedef struct point
     f32 coords[DIMENSIONS];
 } point;
 
-// typedef struct approxCounter
+// typedef struct KDApproxCounter
 // {
 //     u32 value;
 //     u32 totalTreeSize;
@@ -27,7 +27,7 @@ typedef struct KDNode
 {
     nodeType type;
     struct KDNode* parent;
-    // approxCounter size;
+    // KDApproxCounter size;
 
     union
     {

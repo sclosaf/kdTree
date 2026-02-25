@@ -4,10 +4,17 @@
 #include <string.h>
 #include <omp.h>
 
-#include "kdTree/kdTree.h"
-#include "kdTree/kdTreeBuild.h"
+#include "kdTree/components.h"
+#include "kdTree/build.h"
+
 #include "utils/constants.h"
 #include "utils/types.h"
+
+typedef struct Bucket
+{
+    point** bucket;
+    size_t size;
+} Bucket;
 
 static void assignNodesToGroups(KDNode* node, KDGroup** groups, u8 numGroups);
 static size_t calculateSubtreeSize(KDNode* node);

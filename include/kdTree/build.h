@@ -1,13 +1,9 @@
-#ifndef KDTREEBUILD_H
-#define KDTREEBUILD_H
+#ifndef BUILD_H
+#define BUILD_H
 
-#include "kdTree/kdTree.h"
+#include "kdTree/components.h"
 
-typedef struct Bucket
-{
-    point** bucket;
-    size_t size;
-} Bucket;
+typedef struct Bucket Bucket;
 
 KDTree* onChipBuild(point** points, size_t size);
 KDGroup** logStarDecompose(KDTree* tree);
