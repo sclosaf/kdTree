@@ -316,7 +316,7 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
     #pragma omp parallel for
     for(size_t i = 0; i < numChunks; ++i)
     {
-        countMatrix[i] = (uint32_t*)calloc(CHUNK_SIZE, sizeof(u32));
+        countMatrix[i] = (uint32_t*)calloc(CHUNK_SIZE, sizeof(uint32_t));
 
         size_t chunkStart = i * CHUNK_SIZE;
         size_t chunkEnd = (chunkStart + CHUNK_SIZE < size) ? (chunkStart + CHUNK_SIZE) : size;
