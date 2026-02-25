@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
+#include <dpu_types.h>
 
 #include "management/specifics.h"
 
