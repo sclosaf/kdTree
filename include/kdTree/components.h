@@ -1,6 +1,8 @@
 #ifndef COMPONENTS_H
 #define COMPONENTS_H
 
+#include <stdint.h>
+
 #include "utils/constants.h"
 
 typedef enum nodeType
@@ -62,3 +64,5 @@ typedef struct KDTree
     size_t totalPoints;
     uint16_t totalNodes;
 } KDTree;int16_t#endif
+
+#endif
