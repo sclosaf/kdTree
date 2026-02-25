@@ -8,6 +8,7 @@ typedef struct
 {
     struct dpu_set_t set;
     u32 nDpus;
+    u32 nRanks;
     u32 currentDpuId;
 } DPUContext;
 
