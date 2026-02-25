@@ -1,7 +1,9 @@
 #include <stdio.h>
 
+#include "management/specifics.h"
+
 int main(int argc, char* argv[])
 {
-    printf("Hello world\n");
+    printInfoSystem();
     return 0;
 }
