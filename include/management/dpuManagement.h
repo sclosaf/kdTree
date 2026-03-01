@@ -16,9 +16,6 @@ typedef struct
     uint32_t totalPoints;
     uint32_t pointsPerDpu;
     uint32_t dim;
-    float alpha;
-    float beta;
-    uint64_t baseAddress;
 } DPUKernelArgs;
 
 DPUContext* dpuInitContext(uint32_t nDpus);
@@ -29,5 +26,8 @@ int dpuLaunchAllDpus(DPUContext* ctx, const char* path, DPUKernelArgs* args);
 
 int dpuTransferDataToDpu(DPUContext* ctx, uint32_t dpuId, void* data, size_t size, dpu_xfer_flags_t flags);
 int dpuTransferDataFromDpu(DPUContext* ctx, uint32_t dpuId, void* data, size_t size, dpu_xfer_flags_t flags);
+
+int dpuBroadcastFromAllDpus(DPUContext* ctx, const char* symbolName, void* data, size_t size, dpu_xfer_flags_t flags);
+int dpuSyncAllDpus(DPUContext* ctx);
 
 #endif

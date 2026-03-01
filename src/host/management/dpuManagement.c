@@ -118,3 +118,20 @@ int dpuTransferDataFromDpu(DPUContext* ctx, uint32_t dpuId, void* data, size_t s
 
     return -1;
 }
+
+int dpuBroadcastFromAllDpus(DPUContext* ctx, const char* symbolName, void* data, size_t size, dpu_xfer_flags_t flags)
+{
+    if(!ctx || !symbolName || !data || size == 0)
+        return -1;
+
+    DPU_ASSERT(dpu_broadcast_to(ctx->set, symbolName, 0, data, size, flags | DPU_XFER_FROM_DPU));
+    return 0;
+}
+
+int dpuSyncAllDpus(DPUContext* ctx)
+{
+    if(!ctx) return -1;
+
+    DPU_ASSERT(dpu_sync(ctx->set));
+    return 0;
+}
