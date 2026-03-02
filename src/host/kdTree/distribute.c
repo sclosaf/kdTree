@@ -1,4 +1,5 @@
 #include "kdTree/distribute.h"
+#include "kdTree/deserialize.h"
 
 void sendSketchToAllDpus(DPUContext* ctx, KDNode* sketch)
 {
