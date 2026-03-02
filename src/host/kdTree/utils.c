@@ -4,6 +4,7 @@
 #include <math.h>
 
 #include "kdTree/utils.h"
+#include "kdTree/free.h"
 
 float findMedian(point** points, size_t start, size_t end, uint8_t dim)
 {
