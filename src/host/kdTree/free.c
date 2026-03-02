@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "kdTree/free.h"
 
 void freeKDTree(KDNode* node)
