@@ -1,3 +1,9 @@
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <math.h>
+#include <omp.h>
+
 #include "kdTree/build.h"
 
 KDTree* onChipBuild(point** points, size_t size)
