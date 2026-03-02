@@ -27,10 +27,8 @@ static void sendSketchToAllDpus(DPUContext* ctx, KDNode* sketch);
 static void serializeNodeData(KDNode* node, uint8_t** ptr);
 static void serializeNodeSize(KDNode* node, size_t* size);
 static void* serializeTree(KDNode* root, size_t* size);
-static void* serializeNode(KDNode* node, size_t* size);
 static KDNode** collectSubtreesFromDpus(DPUContext* dpuCtx, size_t P, size_t* totalNodes);
 static void collectNodeReferences(KDNode* node, KDNode*** refs, size_t* count, size_t* capacity);
-static void assignNodesToGroups(KDNode* node, size_t totalPoints, uint8_t* groupLevels);
 static void scatterReplica(DPUContext* dpuCtx, KDNode** subtrees, size_t P, size_t totalPoints, KDNode* cacheForest, DpuAllocation* alloc);
 static KDNode* deserializeTree(void* data, size_t size);
 static KDNode* deserializeNode(uint8_t** ptr, uint8_t* end);
@@ -51,7 +49,7 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
     if(!alloc)
         return NULL;
 
-    size_t oversample =RSAMPLING_RATE * OVERSAMPLING_RATE * OVERSAMPLING_RATE;
+    size_t oversample = SAMPLING_RATE * OVERSAMPLING_RATE * OVERSAMPLING_RATE;
     size_t sampleCount = P * oversample;
 
     point** samples = malloc(sampleCount * sizeof(point*));
@@ -484,31 +482,6 @@ static void collectNodeReferences(KDNode* node, KDNode*** refs, size_t* count, s
     }
 }
 
-static void assignNodesToGroups(KDNode* node, size_t totalPoints, uint8_t* groupLevels)
-{
-    if(!node)
-        return;
-
-    size_t subtreeSize = calculateSubtreeSize(node);
-
-    uint8_t level = 0;
-    size_t current = totalPoints;
-
-    while(current > LEAF_WRAP_THRESHOLD && subtreeSize < current)
-    {
-        ++level;
-        current = (size_t)log2(current);
-    }
-
-    ++groupLevels[level];
-
-    if(node->type == INTERNAL)
-    {
-        assignNodesToGroups(node->data.internal.left, totalPoints, groupLevels);
-        assignNodesToGroups(node->data.internal.right, totalPoints, groupLevels);
-    }
-}
-
 static void scatterReplica(DPUContext* dpuCtx, KDNode** subtrees, size_t P, size_t totalPoints, KDNode* cacheForest, DpuAllocation* alloc)
 {
     if(!dpuCtx || !subtrees || !alloc)
@@ -676,63 +649,6 @@ static void scatterReplica(DPUContext* dpuCtx, KDNode** subtrees, size_t P, size
     free(nodesPerLevel);
     free(nodeLevels);
     free(allNodes);
-}
-
-static void* serializeNode(KDNode* node, size_t* size)
-{
-    if(!node || !size)
-        return NULL;
-
-    *size = 1;
-    *size += sizeof(uint32_t);
-
-    if(node->type == INTERNAL)
-    {
-        *size += 1;
-        *size += sizeof(float);
-    }
-    else
-    {
-        *size += sizeof(uint32_t);
-        if(node->data.leaf.pointsCount > 0)
-            *size += node->data.leaf.pointsCount * DIMENSIONS * sizeof(float);
-    }
-
-    void* buffer = malloc(*size);
-    if(!buffer)
-        return NULL;
-
-    uint8_t* ptr = (uint8_t*)buffer;
-
-    *ptr = (node->type == INTERNAL) ? 0 : 1;
-    ++ptr;
-
-    uint32_t subtreeSize = (uint32_t)calculateSubtreeSize(node);
-    memcpy(ptr, &subtreeSize, sizeof(uint32_t));
-    ptr += sizeof(uint32_t);
-
-    if(node->type == INTERNAL)
-    {
-        *ptr = node->data.internal.splitDim;
-        ++ptr;
-
-        memcpy(ptr, &node->data.internal.splitValue, sizeof(float));
-        ptr += sizeof(float);
-    }
-    else
-    {
-        uint32_t count = (uint32_t)node->data.leaf.pointsCount;
-        memcpy(ptr, &count, sizeof(uint32_t));
-        ptr += sizeof(uint32_t);
-
-        for(size_t i = 0; i < count; ++i)
-        {
-            memcpy(ptr, node->data.leaf.points[i].coords, DIMENSIONS * sizeof(float));
-            ptr += DIMENSIONS * sizeof(float);
-        }
-    }
-
-    return buffer;
 }
 
 static KDNode* deserializeTree(void* data, size_t size)
