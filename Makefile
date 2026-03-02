@@ -47,6 +47,6 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 run: $(HOST_TARGET) $(DPU_TARGET)
-	UPMEM_PROFILE="backend=simulator,chipId=0x42" ./$(HOST_TARGET)
+	UPMEM_PROFILE="backend=simulator,chipId=0x2" ./$(HOST_TARGET)
 
 .PHONY: all clean run
