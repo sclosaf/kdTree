@@ -1,6 +1,10 @@
-#include "kdTree/distribute.h"
-#include "kdTree/deserialize.h"
+#include <stdint.h>
+#include <stddef.h>
+#include <math.h>
 
+#include "kdTree/distribute.h"
+#include "kdTree/serialize.h"
+#include "kdTree/deserialize.h"
 
 void sendSketchToAllDpus(DPUContext* ctx, KDNode* sketch)
 {
