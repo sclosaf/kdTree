@@ -1,4 +1,6 @@
+#include <stdlib.h>
 #include <omp.h>
+#include <math.h>
 
 #include "kdTree/utils.h"
 
