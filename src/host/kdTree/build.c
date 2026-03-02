@@ -6,6 +6,8 @@
 
 #include "kdTree/build.h"
 #include "kdTree/utils.h"
+#include "kdTree/free.h"
+#include "management/dpuManagement.h"
 
 KDTree* onChipBuild(point** points, size_t size)
 {
