@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <dpu.h>
+#include <dpu_types.h>
 
 int main()
 {
