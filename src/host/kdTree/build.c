@@ -1,4 +1,4 @@
-#include "kdTree/build.c"
+#include "kdTree/build.h"
 
 KDTree* onChipBuild(point** points, size_t size)
 {

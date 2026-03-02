@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "kdTree/deserialize.h"
 
 KDNode* deserializeTree(void* data, size_t size)
