@@ -1,6 +1,7 @@
 #include "kdTree/distribute.h"
 #include "kdTree/deserialize.h"
 
+
 void sendSketchToAllDpus(DPUContext* ctx, KDNode* sketch)
 {
     size_t sketchSize;
@@ -9,7 +10,7 @@ void sendSketchToAllDpus(DPUContext* ctx, KDNode* sketch)
     if(!sketchData)
         return;
 
-    int ret = dpuBroadcastToAllDpus(ctx, "sketch", sketchData, sketchSize, DPU_XFER_DEFAULT);
+    dpuBroadcastToAllDpus(ctx, "sketch", sketchData, sketchSize, DPU_XFER_DEFAULT);
 
     free(sketchData);
 }
