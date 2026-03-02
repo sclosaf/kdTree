@@ -6,7 +6,6 @@
 #include "management/dpuManagement.h"
 #include "kdTree/build.h"
 #include "utils/constants.h"
-#include "utils/types.h"
 
 typedef struct ReplicaInfo
 {
