@@ -31,7 +31,7 @@ static void* serializeNode(KDNode* node, size_t* size);
 static KDNode** collectSubtreesFromDpus(DPUContext* dpuCtx, size_t P, size_t* totalNodes);
 static void collectNodeReferences(KDNode* node, KDNode*** refs, size_t* count, size_t* capacity);
 static void assignNodesToGroups(KDNode* node, size_t totalPoints, uint8_t* groupLevels);
-static void scatterReplicas(DPUContext* dpuCtx, KDNode** subtrees, size_t P, size_t totalPoints, KDNode* cacheForest);
+static void scatterReplica(DPUContext* dpuCtx, KDNode** subtrees, size_t P, size_t totalPoints, KDNode* cacheForest, DpuAllocation* alloc);
 static KDNode* deserializeTree(void* data, size_t size);
 static KDNode* deserializeNode(uint8_t** ptr, uint8_t* end);
 
@@ -51,7 +51,7 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
     if(!alloc)
         return NULL;
 
-    size_t oversample = numPIMs * OVERSAMPLING_RATE * OVERSAMPLING_RATE * OVERSAMPLING_RATE;
+    size_t oversample =RSAMPLING_RATE * OVERSAMPLING_RATE * OVERSAMPLING_RATE;
     size_t sampleCount = P * oversample;
 
     point** samples = malloc(sampleCount * sizeof(point*));
@@ -128,9 +128,7 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
     DPUKernelArgs args = {
         .totalPoints = 0,
         .pointsPerDpu = 0,
-        .dim = DIMENSIONS,
-        .alpha = ALPHA,
-        .beta = BETA,
+        .dim = DIMENSIONS
     };
 
     for(size_t i = 0; i < P; ++i)
@@ -205,7 +203,7 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
         return NULL;
     }
 
-    scatterReplicas(dpuCtx, subtrees, P, n, cacheForest, alloc);
+    scatterReplica(dpuCtx, subtrees, P, n, cacheForest, alloc);
 
     freeDpuAllocation(alloc);
 
@@ -511,7 +509,7 @@ static void assignNodesToGroups(KDNode* node, size_t totalPoints, uint8_t* group
     }
 }
 
-static void scatterReplicas(DPUContext* dpuCtx, KDNode** subtrees, size_t P, size_t totalPoints, KDNode* cacheForest, DpuAllocation* alloc)
+static void scatterReplica(DPUContext* dpuCtx, KDNode** subtrees, size_t P, size_t totalPoints, KDNode* cacheForest, DpuAllocation* alloc)
 {
     if(!dpuCtx || !subtrees || !alloc)
         return;

@@ -27,7 +27,7 @@ int dpuLaunchAllDpus(DPUContext* ctx, const char* path, DPUKernelArgs* args);
 int dpuTransferDataToDpu(DPUContext* ctx, uint32_t dpuId, void* data, size_t size, dpu_xfer_flags_t flags);
 int dpuTransferDataFromDpu(DPUContext* ctx, uint32_t dpuId, void* data, size_t size, dpu_xfer_flags_t flags);
 
-int dpuBroadcastFromAllDpus(DPUContext* ctx, const char* symbolName, void* data, size_t size, dpu_xfer_flags_t flags);
+int dpuBroadcastToAllDpus(DPUContext* ctx, const char* symbolName, void* data, size_t size, dpu_xfer_flags_t flags);
 int dpuSyncAllDpus(DPUContext* ctx);
 
 #endif

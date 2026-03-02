@@ -119,7 +119,7 @@ int dpuTransferDataFromDpu(DPUContext* ctx, uint32_t dpuId, void* data, size_t s
     return -1;
 }
 
-int dpuBroadcastFromAllDpus(DPUContext* ctx, const char* symbolName, void* data, size_t size, dpu_xfer_flags_t flags)
+int dpuBroadcastToAllDpus(DPUContext* ctx, const char* symbolName, void* data, size_t size, dpu_xfer_flags_t flags)
 {
     if(!ctx || !symbolName || !data || size == 0)
         return -1;
