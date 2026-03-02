@@ -1,6 +1,8 @@
 #ifndef KDTREE_DISTRIBUTE_H
 #define KDTREE_DISTRIBUTE_H
 
+#include "management/dpuManagement.h"
+
 typedef struct ReplicaInfo
 {
     uint32_t dpuId;
