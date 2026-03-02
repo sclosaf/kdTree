@@ -1,47 +1,4 @@
-#include <stdlib.h>
-#include <math.h>
-#include <stdbool.h>
-#include <string.h>
-#include <omp.h>
-
-#include "kdTree/components.h"
-#include "kdTree/build.h"
-
-#include "utils/constants.h"
-
-typedef struct Bucket
-{
-    point** bucket;
-    size_t size;
-} Bucket;
-
-static void assignNodesToGroups(KDNode* node, KDGroup** groups, uint8_t numGroups);
-static size_t calculateSubtreeSize(KDNode* node);
-static int16_t findGroup(size_t size, KDGroup** groups, uint8_t numGroups);
-
-static void copyNode(KDNode* dest, KDNode* src);
-static KDNode* buildReplicatedTree(KDGroup** groups, uint8_t groupLevel);
-
-static KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth);
-static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, uint16_t depth);
-static void buildSketch(KDNode** root, point** samples, size_t sampleCount, uint16_t level);
-static Bucket* sievePoints(point** points, size_t size, KDNode* sketch);
-
-static uint32_t getBucket(KDNode* sketch, point* p);
-
-static float findMedian(point** points, size_t start, size_t end, uint8_t dim);
-static uint8_t findSplitDim(point** points, size_t start, size_t end);
-static size_t parallelPartition(point** points, size_t start, size_t end, uint8_t dim, float pivot);
-
-static KDNode* createLeafNode(point** points, size_t size);
-static void freeLeafNode(KDNode* node);
-
-static void attachSubtree(KDNode* sketch, uint16_t bucketId, KDNode* subtree);
-static int compareByDim(const void* a, const void* b, void* dim);
-static uint32_t** computePrefixSum(uint32_t** matrix, size_t rows, size_t cols);
-
-static void freeKDTree(KDNode* node);
-static void freeMatrix(void** matrix, size_t rows);
+#include "kdTree/build.c"
 
 KDTree* onChipBuild(point** points, size_t size)
 {
@@ -133,7 +90,214 @@ KDGroup** logStarDecompose(KDTree* tree)
     return groups;
 }
 
-static void assignNodesToGroups(KDNode* node, KDGroup** groups, uint8_t numGroups)
+KDTree* replicate(KDTree* original, KDGroup** groups)
+{
+    if(!original || !groups)
+        return NULL;
+
+    KDTree* newTree = (KDTree*)malloc(sizeof(KDTree));
+    if(!newTree)
+        return NULL;
+
+    newTree->totalPoints = original->totalPoints;
+    newTree->totalNodes = 0;
+
+    newTree->root = buildReplicatedTree(groups, 0);
+
+    return newTree;
+}
+
+KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
+{
+    if(!points || n == 0 || !dpuCtx)
+        return NULL;
+
+    size_t P = dpuCtx->nDpus;
+
+    DpuAllocation* alloc = createDpuAllocation(P);
+    if(!alloc)
+        return NULL;
+
+    size_t oversample = SAMPLING_RATE * OVERSAMPLING_RATE * OVERSAMPLING_RATE;
+    size_t sampleCount = P * oversample;
+
+    point** samples = malloc(sampleCount * sizeof(point*));
+    if(!samples)
+        return NULL;
+
+    #pragma omp parallel for
+    for(size_t i = 0; i < sampleCount; ++i)
+        samples[i] = points[rand() % n];
+
+
+    uint16_t sketchLevels = (uint16_t)ceil(log2(P));
+
+    KDNode* cacheForest = NULL;
+    buildSketch(&cacheForest, samples, sampleCount, sketchLevels);
+
+    free(samples);
+
+    if(!cacheForest)
+        return NULL;
+
+    point*** perPimPoints = malloc(P * sizeof(point**));
+    size_t* perPimCounts = calloc(P, sizeof(size_t));
+
+    if(!perPimPoints || !perPimCounts)
+    {
+        free(perPimPoints);
+        free(perPimCounts);
+
+        return NULL;
+    }
+
+    traverseSketchAndAssign(cacheForest, points, n, P, NULL, perPimCounts);
+
+    for(size_t i = 0; i < P; ++i)
+    {
+        perPimPoints[i] = malloc(perPimCounts[i] * sizeof(point*));
+
+        if(!perPimPoints[i])
+        {
+            for(size_t j = 0; j < i; ++j)
+                free(perPimPoints[j]);
+
+            free(perPimPoints);
+            free(perPimCounts);
+
+            return NULL;
+        }
+    }
+
+    size_t* counters = calloc(P, sizeof(size_t));
+    if(!counters)
+    {
+        for(size_t i = 0; i < P; i++)
+            if(perPimPoints[i])
+                free(perPimPoints[i]);
+
+        free(perPimPoints);
+        free(perPimCounts);
+
+        return NULL;
+    }
+
+    for(size_t i = 0; i < n; ++i)
+    {
+        size_t leafIndex = getBucket(cacheForest, points[i]);
+        size_t pimId = leafIndex % P;
+
+        perPimPoints[pimId][counters[pimId]++] = points[i];
+    }
+
+    free(counters);
+
+    DPUKernelArgs args = {
+        .totalPoints = 0,
+        .pointsPerDpu = 0,
+        .dim = DIMENSIONS
+    };
+
+    for(size_t i = 0; i < P; ++i)
+    {
+        if(perPimCounts[i] == 0)
+            continue;
+
+        float* pointData = malloc(perPimCounts[i] * DIMENSIONS * sizeof(float));
+
+        if(!pointData)
+        {
+            for(size_t j = 0; j < i; ++j)
+                if(perPimPoints[j] && perPimCounts[j] > 0)
+                    free(perPimPoints[j]);
+
+            free(perPimPoints);
+            free(perPimCounts);
+            free(counters);
+
+            return NULL;
+        }
+
+        for(size_t j = 0; j < perPimCounts[i]; ++j)
+            memcpy(&pointData[j * DIMENSIONS], perPimPoints[i][j]->coords, DIMENSIONS * sizeof(float));
+
+        int ret = dpuTransferDataToDpu(dpuCtx, i, pointData, perPimCounts[i] * DIMENSIONS * sizeof(float), DPU_XFER_DEFAULT);
+        free(pointData);
+        if(ret != 0)
+        {
+            for(size_t j = 0; j < P; ++j)
+                if(perPimPoints[j] && perPimCounts[j] > 0)
+                    free(perPimPoints[j]);
+
+            free(perPimPoints);
+            free(perPimCounts);
+            free(counters);
+
+            return NULL;
+        }
+
+        args.totalPoints = perPimCounts[i];
+
+        ret = dpuLaunchSpecificDpu(dpuCtx, i, "tasklet", &args); // TO DO - tasklet
+        if(ret != 0)
+        {
+            for(size_t j = 0; j < P; j++)
+                if(perPimPoints[j])
+                    free(perPimPoints[j]);
+
+            free(perPimPoints);
+            free(perPimCounts);
+            free(counters);
+
+            return NULL;
+        }
+    }
+
+    sendSketchToAllDpus(dpuCtx, cacheForest);
+
+    size_t totalNodes;
+    KDNode** subtrees = collectSubtreesFromDpus(dpuCtx, P, &totalNodes);
+
+    if(!subtrees)
+    {
+        for(size_t i = 0; i < P; ++i)
+            if(perPimPoints[i])
+                free(perPimPoints[i]);
+
+        free(perPimPoints);
+        free(perPimCounts);
+        free(counters);
+        return NULL;
+    }
+
+    scatterReplica(dpuCtx, subtrees, P, n, cacheForest, alloc);
+
+    freeDpuAllocation(alloc);
+
+    for(size_t i = 0; i < P; ++i)
+        if(subtrees[i])
+            freeKDTree(subtrees[i]);
+
+    free(subtrees);
+
+    for(size_t i = 0; i < P; ++i)
+        free(perPimPoints[i]);
+
+    free(perPimPoints);
+    free(perPimCounts);
+
+    KDTree* result = malloc(sizeof(KDTree));
+    if(result)
+    {
+        result->root = cacheForest;
+        result->totalPoints = n;
+        result->totalNodes = 0;
+    }
+
+    return result;
+}
+
+void assignNodesToGroups(KDNode* node, KDGroup** groups, uint8_t numGroups)
 {
     if(!node)
         return;
@@ -155,44 +319,7 @@ static void assignNodesToGroups(KDNode* node, KDGroup** groups, uint8_t numGroup
     }
 }
 
-static size_t calculateSubtreeSize(KDNode* node)
-{
-    if(!node)
-        return 0;
-
-    if(node->type == LEAF)
-        return node->data.leaf.pointsCount;
-
-    return calculateSubtreeSize(node->data.internal.left) + calculateSubtreeSize(node->data.internal.right);
-}
-
-static int16_t findGroup(size_t size, KDGroup** groups, uint8_t numGroups)
-{
-    for(int i = 0; i < numGroups; ++i)
-        if(size > groups[i]->minSize && size <= groups[i]->maxSize)
-            return i;
-
-    return -1;
-}
-
-KDTree* replicate(KDTree* original, KDGroup** groups)
-{
-    if(!original || !groups)
-        return NULL;
-
-    KDTree* newTree = (KDTree*)malloc(sizeof(KDTree));
-    if(!newTree)
-        return NULL;
-
-    newTree->totalPoints = original->totalPoints;
-    newTree->totalNodes = 0;
-
-    newTree->root = buildReplicatedTree(groups, 0);
-
-    return newTree;
-}
-
-static KDNode* buildReplicatedTree(KDGroup** groups, uint8_t groupLevel)
+KDNode* buildReplicatedTree(KDGroup** groups, uint8_t groupLevel)
 {
     uint8_t currentLevel = groupLevel;
     while(groups[currentLevel] != NULL && groups[currentLevel]->count == 0)
@@ -234,7 +361,7 @@ static KDNode* buildReplicatedTree(KDGroup** groups, uint8_t groupLevel)
     return node;
 }
 
-static void copyNode(KDNode* dest, KDNode* src)
+void copyNode(KDNode* dest, KDNode* src)
 {
     if(!dest || !src)
         return;
@@ -263,7 +390,7 @@ static void copyNode(KDNode* dest, KDNode* src)
 }
 
 
-static KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth)
+KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth)
 {
     if(size <= LEAF_WRAP_THRESHOLD)
         return createLeafNode(points, size);
@@ -305,7 +432,7 @@ static KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth)
     return sketch;
 }
 
-static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
+Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 {
     size_t numChunks = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
@@ -402,7 +529,7 @@ static Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
     return buckets;
 }
 
-static void buildSketch(KDNode** root, point** samples, size_t sampleCount, uint16_t levels)
+void buildSketch(KDNode** root, point** samples, size_t sampleCount, uint16_t levels)
 {
     if(levels == 0 || sampleCount <= LEAF_WRAP_THRESHOLD)
     {
@@ -486,32 +613,7 @@ static void buildSketch(KDNode** root, point** samples, size_t sampleCount, uint
     free(rightSamples);
 }
 
-static uint32_t getBucket(KDNode* sketch, point* p)
-{
-    uint32_t id = 0;
-    KDNode* current = sketch;
-    uint16_t level = 0;
-
-    while(current && level < SKETCH_HEIGHT && current->type != LEAF)
-    {
-        id <<= 1;
-        if(p->coords[current->data.internal.splitDim] >= current->data.internal.splitValue)
-        {
-            id |= 1;
-            current = current->data.internal.right;
-        }
-        else
-        {
-            current = current->data.internal.left;
-        }
-
-        ++level;
-    }
-
-    return id;
-}
-
-static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, uint16_t depth)
+KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, uint16_t depth)
 {
     size_t size = end - start + 1;
 
@@ -551,96 +653,7 @@ static KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, 
     return node;
 }
 
-static float findMedian(point** points, size_t start, size_t end, uint8_t dim)
-{
-    size_t size = end - start + 1;
-    size_t mid = start + size / 2;
-
-    qsort_r(&points[start], size, sizeof(point*), compareByDim, &dim);
-
-    return points[mid]->coords[dim];
-}
-
-static uint8_t findSplitDim(point** points, size_t start, size_t end)
-{
-    float minCoords[DIMENSIONS], maxCoords[DIMENSIONS];
-
-    for(size_t i = 0; i < DIMENSIONS; ++i)
-    {
-        minCoords[i] = INFINITY;
-        maxCoords[i] = -INFINITY;
-    }
-
-    for(size_t i = start; i <= end; ++i)
-    {
-        for(size_t j = 0; j < DIMENSIONS; ++j)
-        {
-            float val = points[i]->coords[j];
-            if(val < minCoords[j])
-                minCoords[j] = val;
-
-            if(val > maxCoords[j])
-                maxCoords[j] = val;
-        }
-    }
-
-    uint8_t splitDim = 0;
-    float maxRange = maxCoords[0] - minCoords[0];
-
-    for(size_t i = 1; i < DIMENSIONS; ++i)
-    {
-        float range = maxCoords[i] - minCoords[i];
-
-        if(range > maxRange)
-        {
-            maxRange = range;
-            splitDim = i;
-        }
-    }
-
-    return splitDim;
-}
-
-static size_t parallelPartition(point** points, size_t start, size_t end, uint8_t dim, float pivot)
-{
-    size_t size = end - start + 1;
-
-    point** left = (point**)malloc(size * sizeof(point*));
-    if(!left)
-        return start;
-
-    point** right = (point**)malloc(size * sizeof(point*));
-    if(!right)
-    {
-        free(left);
-        return start;
-    }
-
-    size_t leftCount = 0;
-    size_t rightCount = 0;
-
-    #pragma omp parallel for reduction(+:leftCount, rightCount)
-    for(size_t i = start; i <= end; ++i)
-        if(points[i]->coords[dim] < pivot)
-            left[leftCount++] = points[i];
-        else
-            right[rightCount++] = points[i];
-
-    #pragma omp parallel for
-    for(size_t i = 0; i < leftCount; ++i)
-        points[start + i] = left[i];
-
-    #pragma omp parallel for
-    for(size_t i = 0; i < rightCount; ++i)
-        points[start + leftCount + i] = right[i];
-
-    free(left);
-    free(right);
-
-    return start + leftCount;
-}
-
-static KDNode* createLeafNode(point** points, size_t size)
+KDNode* createLeafNode(point** points, size_t size)
 {
     KDNode* leaf = (KDNode*)malloc(sizeof(KDNode));
     if(!leaf)
@@ -664,21 +677,7 @@ static KDNode* createLeafNode(point** points, size_t size)
     return leaf;
 }
 
-static void freeLeafNode(KDNode* node)
-{
-    if(!node)
-        return;
-
-    if(node->type == LEAF)
-    {
-        if (node->data.leaf.points)
-            free(node->data.leaf.points);
-
-        free(node);
-    }
-}
-
-static void attachSubtree(KDNode* sketch, uint16_t bucketId, KDNode* subtree)
+void attachSubtree(KDNode* sketch, uint16_t bucketId, KDNode* subtree)
 {
     if(!sketch || bucketId >= CHUNK_SIZE)
         return;
@@ -715,148 +714,75 @@ static void attachSubtree(KDNode* sketch, uint16_t bucketId, KDNode* subtree)
         subtree->parent = current;
 }
 
-static int compareByDim(const void* a, const void* b, void* dim)
+void traverseSketchAndAssign(KDNode* sketch, point** points, size_t n, size_t P, point*** perPimPoints, size_t* perPimCounts)
 {
-    uint8_t d = *(uint8_t*)dim;
-    point* pa = *(point**)a;
-    point* pb = *(point**)b;
-
-    if(pa->coords[d] < pb->coords[d])
-        return -1;
-
-    if(pa->coords[d] > pb->coords[d])
-        return 1;
-
-    return 0;
-}
-
-static uint32_t** computePrefixSum(uint32_t** matrix, size_t rows, size_t cols)
-{
-    uint32_t** transposed = (uint32_t**)malloc(cols * sizeof(uint32_t*));
-    if(!transposed)
-        return NULL;
-
-    for(size_t j = 0; j < cols; ++j)
-    {
-        transposed[j] = (uint32_t*)malloc(rows * sizeof(uint32_t));
-
-        if(!transposed[j])
-        {
-            freeMatrix((void**)transposed, j);
-            return NULL;
-        }
-
-        for(size_t i = 0; i < rows; ++i)
-            transposed[j][i] = matrix[i][j];
-    }
-
-    #pragma omp parallel for
-    for(size_t j = 0; j < cols; ++j)
-    {
-        uint32_t sum = 0;
-        for(size_t i = 0; i < rows; ++i)
-        {
-            uint32_t current_val = transposed[j][i];
-            transposed[j][i] = sum;
-            sum += current_val;
-        }
-    }
-
-    uint32_t* columnPrefixSums = (uint32_t*)calloc(cols + 1, sizeof(uint32_t));
-
-    if(!columnPrefixSums)
-    {
-        freeMatrix((void**)transposed, cols);
-        return NULL;
-    }
-
-    uint32_t total = 0;
-    for(size_t j = 0; j < cols; ++j)
-    {
-        columnPrefixSums[j] = total;
-        total += transposed[j][rows - 1] + matrix[rows - 1][j];
-    }
-
-    columnPrefixSums[cols] = total;
-
-    #pragma omp parallel for
-    for(size_t j = 0; j < cols; ++j)
-    {
-        uint32_t colOffset = columnPrefixSums[j];
-        for(size_t i = 0; i < rows; ++i)
-            transposed[j][i] += colOffset;
-    }
-
-    uint32_t** result = (uint32_t**)malloc(rows * sizeof(uint32_t*));
-    if(!result)
-    {
-        free(columnPrefixSums);
-        freeMatrix((void**)transposed, cols);
-        return NULL;
-    }
-
-    bool error = false;
-    #pragma omp parallel for
-    for(size_t i = 0; i < rows; ++i)
-    {
-        result[i] = (uint32_t*)malloc(cols * sizeof(uint32_t));
-
-        if(!result[i])
-        {
-            #pragma omp critical
-            error = true;
-            continue;
-        }
-
-        for(size_t j = 0; j < cols; ++j)
-            result[i][j] = transposed[j][i];
-    }
-
-    if(error)
-    {
-        freeMatrix((void**)result, rows);
-        free(columnPrefixSums);
-        freeMatrix((void**)transposed, cols);
-        return NULL;
-    }
-
-    free(columnPrefixSums);
-    freeMatrix((void**)transposed, cols);
-
-    return result;
-}
-
-static void freeKDTree(KDNode* node)
-{
-    if(!node)
+    if(!sketch || !points || n == 0 || P == 0 || !perPimCounts)
         return;
 
-    if(node->type == INTERNAL)
+    if(perPimPoints == NULL)
     {
-        freeKDTree(node->data.internal.left);
-        freeKDTree(node->data.internal.right);
+        #pragma omp parallel for
+        for(size_t i = 0; i < n; ++i)
+        {
+            size_t leafIndex = getBucket(sketch, points[i]);
+            size_t pimId = leafIndex % P;
+
+            #pragma omp atomic
+            ++perPimCounts[pimId];
+        }
     }
     else
     {
-        if(node->data.leaf.points)
+        int maxThreads = omp_get_max_threads();
+        size_t** localCounters = malloc(maxThreads * sizeof(size_t*));
+
+        #pragma omp parallel
         {
-            free(node->data.leaf.points);
-            node->data.leaf.points = NULL;
+            #pragma omp single
+            {
+                for(int i = 0; i < maxThreads; ++i)
+                    localCounters[i] = calloc(P, sizeof(size_t));
+            }
         }
-    }
 
-    free(node);
+        #pragma omp parallel
+        {
+            int threadId = omp_get_thread_num();
+
+            #pragma omp for
+            for(size_t i = 0; i < n; ++i)
+            {
+                size_t leafIndex = getBucket(sketch, points[i]);
+                size_t pimId = leafIndex % P;
+
+                size_t pos = localCounters[threadId][pimId];
+
+                perPimPoints[pimId][pos] = points[i];
+                ++localCounters[threadId][pimId];
+            }
+        }
+
+        #pragma omp parallel
+        {
+            int threadId = omp_get_thread_num();
+            size_t pimStart = (P * threadId) / maxThreads;
+            size_t pimEnd = (P * (threadId + 1)) / maxThreads;
+
+            for(size_t p = pimStart; p < pimEnd; ++p)
+            {
+                size_t total = 0;
+
+                for(int t = 0; t < maxThreads; ++t)
+                    total += localCounters[t][p];
+
+                perPimCounts[p] = total;
+            }
+        }
+
+        for(int t = 0; t < maxThreads; ++t)
+            free(localCounters[t]);
+
+        free(localCounters);
+    }
 }
 
-static void freeMatrix(void** matrix, size_t rows)
-{
-    if(!matrix)
-        return;
-
-    for(size_t i = 0; i < rows; ++i)
-    {
-        if(matrix[i])
-            free(matrix[i]);
-    }
-    free(matrix);
-}

@@ -1,5 +1,5 @@
-#ifndef DPUMANAGEMENT_H
-#define DPUMANAGEMENT_H
+#ifndef MANAGEMENT_DPUMANAGEMENT_H
+#define MANAGEMENT_DPUMANAGEMENT_H
 
 #include <dpu.h>
 

@@ -1,7 +1,8 @@
-#ifndef COMPONENTS_H
-#define COMPONENTS_H
+#ifndef KDTREE_TYPES_H
+#define KDTREE_TYPES_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 #include "utils/constants.h"
 
@@ -11,11 +12,6 @@ typedef enum nodeType
     LEAF
 } nodeType;
 
-typedef struct point
-{
-    float coords[DIMENSIONS];
-} point;
-
 // typedef struct KDApproxCounter
 // {
 //     uint32_t value;
@@ -23,6 +19,11 @@ typedef struct point
 //     float beta;
 //     uint32_t lastUpdate;
 // } approxCounter;
+
+typedef struct point
+{
+    float coords[DIMENSIONS];
+} point;
 
 typedef struct KDNode
 {
@@ -36,7 +37,6 @@ typedef struct KDNode
         {
             uint8_t splitDim;
             float splitValue;
-
             struct KDNode* left;
             struct KDNode* right;
         } internal;
@@ -60,7 +60,6 @@ typedef struct KDGroup
 typedef struct KDTree
 {
     KDNode* root;
-
     size_t totalPoints;
     uint16_t totalNodes;
 } KDTree;
