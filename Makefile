@@ -47,6 +47,6 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 run: $(HOST_TARGET) $(DPU_TARGET)
-	UPMEM_PROFILE="backend=simulator" ./$(HOST_TARGET)q
+	UPMEM_PROFILE="backend=simulator" ./$(HOST_TARGET)
 
 .PHONY: all clean run
