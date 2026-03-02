@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "kdTree/serialize.h"
 
 void* serializeTree(KDNode* root, size_t* size)
