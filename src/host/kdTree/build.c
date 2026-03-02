@@ -5,6 +5,7 @@
 #include <omp.h>
 
 #include "kdTree/build.h"
+#include "kdTree/utils.h"
 
 KDTree* onChipBuild(point** points, size_t size)
 {
@@ -124,7 +125,7 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
     if(!alloc)
         return NULL;
 
-    size_t oversample = SAMPLING_RATE * OVERSAMPLING_RATE * OVERSAMPLING_RATE;
+    size_t oversample = OVERSAMPLING_RATE * OVERSAMPLING_RATE * OVERSAMPLING_RATE;
     size_t sampleCount = P * oversample;
 
     point** samples = malloc(sampleCount * sizeof(point*));
