@@ -89,7 +89,8 @@ uint32_t getWramAvailable()
         if(id >= maxDpus)
             break;
 
-        DPU_ASSERT(dpu_copy_from(dpu, "results", 0, &wramResults[id], sizeof(uint32_t)));
+        DPU_ASSERT(dpu_copy_from(dpuSet, dpu, "results", 0, &wramResults[id], sizeof(uint32_t)));
+
         ++id;
     }
 
