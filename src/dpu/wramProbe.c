@@ -6,7 +6,7 @@ static uint32_t measureWramAvailable(void)
 {
     uint32_t total = 0;
     uint32_t minBlock = 1;
-    uint32_t step = 64;
+    uint32_t step = 63;
     void *ptr;
 
     while(step >= minBlock)
