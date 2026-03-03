@@ -1,5 +1,6 @@
 #include <dpu.h>
 #include <stdint.h>
+#include <sys/sysinfo.h>
 #include <stdio.h>
 
 #include "management/metrics.h"
@@ -64,6 +65,8 @@ uint32_t getWramAvailable()
 {
     uint32_t maxDpus = 64;
     struct dpu_set_t dpuSet;
+    struct dpu_t *dpu;
+    struct dpu_rank_t *rank;
     uint32_t wramResults[maxDpus];
     int id = 0;
 
@@ -84,10 +87,10 @@ uint32_t getWramAvailable()
 
     DPU_FOREACH(dpuSet, dpu, rank)
     {
-        if(id >= MAX_DPUS)
+        if(id >= maxDpus)
             break;
 
-        DPU_ASSERT(dpu_copy_from(dpu, 0, &wram_results[id], sizeof(uint32_t)));
+        DPU_ASSERT(dpu_copy_from(dpu, 0, &results[id], sizeof(uint32_t)));
         ++id;
     }
 
@@ -95,7 +98,7 @@ uint32_t getWramAvailable()
 
     uint64_t sum = 0;
     for (int i = 0; i < id; ++i)
-        sum += wram_results[i];
+        sum += wramResults[i];
 
     return (id > 0) ? (uint32_t)(sum / id) : 0;
 
