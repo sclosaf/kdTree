@@ -65,9 +65,7 @@ uint32_t getWramAvailable()
 {
     uint32_t maxDpus = 64;
     struct dpu_set_t dpuSet;
-    struct dpu_t *dpu;
     uint32_t wramResults[maxDpus];
-    int id = 0;
 
     if (dpu_alloc(DPU_ALLOCATE_ALL, NULL, &dpuSet) != DPU_OK)
         return 0;
@@ -84,24 +82,16 @@ uint32_t getWramAvailable()
         return 0;
     }
 
-    DPU_FOREACH(dpuSet, dpu)
-    {
-        if(id >= maxDpus)
-            break;
-
-        DPU_ASSERT(dpu_copy_from(dpuSet, dpu, "results", 0, &wramResults[id], sizeof(uint32_t)));
-
-        ++id;
-    }
+    // copia WRAM da tutti i DPUs in una volta
+    DPU_ASSERT(dpu_copy_from(dpuSet, "results", 0, wramResults, sizeof(wramResults)));
 
     dpu_free(dpuSet);
 
     uint64_t sum = 0;
-    for (int i = 0; i < id; ++i)
+    for (int i = 0; i < maxDpus; ++i)
         sum += wramResults[i];
 
-    return (id > 0) ? (uint32_t)(sum / id) : 0;
-
+    return (sum / maxDpus);
 }
 
 void printSystemMetrics()
