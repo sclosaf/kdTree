@@ -61,38 +61,6 @@ uint32_t getNumRanks()
     return nRanks;
 }
 
-uint32_t getWramAvailable()
-{
-    uint32_t maxDpus = 64;
-    struct dpu_set_t dpuSet;
-    uint32_t wramResults[maxDpus];
-
-    if (dpu_alloc(DPU_ALLOCATE_ALL, NULL, &dpuSet) != DPU_OK)
-        return 0;
-
-    if (dpu_load(dpuSet, "build/dpu/wramProbe.elf", NULL) != DPU_OK)
-    {
-        dpu_free(dpuSet);
-        return 0;
-    }
-
-    if (dpu_launch(dpuSet, DPU_SYNCHRONOUS) != DPU_OK)
-    {
-        dpu_free(dpuSet);
-        return 0;
-    }
-
-    DPU_ASSERT(dpu_copy_from(dpuSet, "results", 0, wramResults, sizeof(wramResults)));
-
-    dpu_free(dpuSet);
-
-    uint64_t sum = 0;
-    for (int i = 0; i < maxDpus; ++i)
-        sum += wramResults[i];
-
-    return (sum / maxDpus);
-}
-
 void printSystemMetrics()
 {
     unsigned long long totalRam = getTotalRam();
@@ -109,8 +77,4 @@ void printSystemMetrics()
     printf("\n=== DPU / UPMEM ===\n");
     printf("Total DPUs      : %u\n", nDpus);
     printf("Total ranks     : %u\n", nRanks);
-
-    uint32_t wramAvailable = getWramAvailable();
-
-    printf("WRAM available  : %u bytes (%.2f KB)\n", wramAvailable, (double)wramAvailable / 1024.0);
 }
