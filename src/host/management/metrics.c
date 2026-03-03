@@ -83,7 +83,7 @@ uint32_t getWramAvailable()
         return 0;
     }
 
-    DPU_FOREACH(dpuSet, dpu, rank)
+    DPU_FOREACH(dpuSet, dpu)
     {
         if(id >= maxDpus)
             break;
