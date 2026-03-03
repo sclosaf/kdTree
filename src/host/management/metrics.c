@@ -82,7 +82,6 @@ uint32_t getWramAvailable()
         return 0;
     }
 
-    // copia WRAM da tutti i DPUs in una volta
     DPU_ASSERT(dpu_copy_from(dpuSet, "results", 0, wramResults, sizeof(wramResults)));
 
     dpu_free(dpuSet);
