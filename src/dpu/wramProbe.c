@@ -15,7 +15,7 @@ static uint32_t measureWramAvailable(void)
         if(ptr != NULL)
         {
             total += step;
-            mem_free(ptr);
+            mem_reset();
         }
         else
         {
