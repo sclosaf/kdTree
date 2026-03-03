@@ -18,11 +18,10 @@ static uint32_t measureWramAvailable(void)
             mem_reset();
         }
         else
-        {
             step /= 2;
-        }
     }
 
+    mem_reset();
     return total;
 }
 
