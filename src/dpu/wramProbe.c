@@ -9,7 +9,7 @@ static uint32_t measureWramAvailable(void)
     uint32_t step = 4096;
     void *ptr;
 
-    while (step >= MIN_BLOCK)
+    while (step >= minBlock)
     {
         ptr = mem_alloc(step);
         if(ptr != NULL)
