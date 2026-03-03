@@ -65,8 +65,6 @@ uint32_t getWramAvailable()
 {
     uint32_t maxDpus = 64;
     struct dpu_set_t dpuSet;
-    struct dpu_t *dpu;
-    struct dpu_rank_t *rank;
     uint32_t wramResults[maxDpus];
     int id = 0;
 
@@ -90,7 +88,7 @@ uint32_t getWramAvailable()
         if(id >= maxDpus)
             break;
 
-        DPU_ASSERT(dpu_copy_from(dpu, 0, &results[id], sizeof(uint32_t)));
+        DPU_ASSERT(dpu_copy_from(dpuSet, "results", 0, &wramResults[id], sizeof(uint32_t)));
         ++id;
     }
 
