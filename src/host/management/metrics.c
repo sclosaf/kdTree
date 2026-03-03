@@ -65,6 +65,7 @@ uint32_t getWramAvailable()
 {
     uint32_t maxDpus = 64;
     struct dpu_set_t dpuSet;
+    struct dpu_t *dpu;
     uint32_t wramResults[maxDpus];
     int id = 0;
 
