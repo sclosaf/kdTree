@@ -3,6 +3,8 @@
 
 #include "kdTree/serialize.h"
 
+#include "environment/init.h"
+
 void* serializeTree(KDNode* root, size_t* size)
 {
     if(!root || !size)
@@ -41,7 +43,7 @@ void serializeNodeSize(KDNode* node, size_t* size)
         *size += sizeof(uint32_t);
 
         if(node->data.leaf.pointsCount > 0 && node->data.leaf.points)
-            *size += node->data.leaf.pointsCount * DIMENSIONS * sizeof(float);
+            *size += node->data.leaf.pointsCount * getConfig()->dimensions * sizeof(float);
     }
 }
 
@@ -78,8 +80,8 @@ void serializeNodeData(KDNode* node, uint8_t** ptr)
         {
             for(size_t i = 0; i < count; i++)
             {
-                memcpy(*ptr, node->data.leaf.points[i].coords, DIMENSIONS * sizeof(float));
-                *ptr += DIMENSIONS * sizeof(float);
+                memcpy(*ptr, node->data.leaf.points[i].coords, getConfig()->dimensions * sizeof(float));
+                *ptr += getConfig->dimensions * sizeof(float);
             }
         }
     }
