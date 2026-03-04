@@ -1,6 +1,8 @@
 #ifndef ENVIRONMENT_INIT_H
 #define ENVIRONMENT_INIT_H
 
+#include <stdint.h>
+
 typedef struct Config
 {
     uint32_t nPoint;
