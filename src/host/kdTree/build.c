@@ -24,7 +24,7 @@ KDTree* onChipBuild(point** points, size_t size)
     tree->totalPoints = size;
     tree->totalNodes = 0;
 
-    if(size < getConfig()->chunkSize * getConfig()->overSamplingRate)
+    if(size < getConfig()->chunkSize * getConfig()->oversamplingRate)
         tree->root = buildTreeParallelPlain(points, 0, size - 1, 0);
     else
         tree->root = buildTreeParallel(points, size, 0);
@@ -130,7 +130,7 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
     if(!alloc)
         return NULL;
 
-    size_t rate = getConfig()->overSamplingRate;
+    size_t rate = getConfig()->oversamplingRate;
     size_t sampleCount = P * rate;
 
     point** samples = malloc(sampleCount * sizeof(point*));
@@ -406,7 +406,7 @@ KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth)
     if(size <= getConfig()->leafWrapThreshold)
         return createLeafNode(points, size);
 
-    size_t sampleCount = getConfig()->chunkSize * getConfig()->overSamplingRate;
+    size_t sampleCount = getConfig()->chunkSize * getConfig()->oversamplingRate;
     point** samples = (point**)malloc(sampleCount * sizeof(point*));
     if(!samples)
         return NULL;
