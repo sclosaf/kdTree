@@ -18,7 +18,7 @@ static Config config =
     .alpha = DEFAULT_ALPHA,
     .beta = DEFAULT_BETA,
     .leafWrapThreshold = DEFAULT_LEAF_WRAP_THRESHOLD,
-    .overSamplingRate = DEFAULT_OVERSAMPLING_RATE,
+    .oversamplingRate = DEFAULT_OVERSAMPLING_RATE,
     .sketchHeight = DEFAULT_SKETCH_HEIGHT,
     .chunkSize = DEFAULT_CHUNK_SIZE
 };

@@ -11,7 +11,7 @@ typedef struct Config
     float alpha;
     float beta;
     uint16_t leafWrapThreshold;
-    uint16_t overSamplingRate;
+    uint16_t oversamplingRate;
     uint8_t sketchHeight;
     uint16_t chunkSize;
 } Config;
