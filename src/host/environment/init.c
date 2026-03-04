@@ -130,7 +130,7 @@ void printConfig()
     printf("  chunkSize = %u\n", config.chunkSize);
 }
 
-int initConfig()
+void initConfig()
 {
     char path[512];
     FILE* file;
@@ -139,13 +139,13 @@ int initConfig()
     int line_num = 0;
 
     if(configInitialized)
-        return 0;
+        return;
 
     root = getProjectRoot();
     if(root == NULL)
     {
         configInitialized = true;
-        return 0;
+        return;
     }
 
     snprintf(path, sizeof(path), "%s/.env", root);
@@ -154,7 +154,7 @@ int initConfig()
     if(file == NULL)
     {
         configInitialized = true;
-        return 0;
+        return;
     }
 
     while(fgets(line, sizeof(line), file) != NULL)
@@ -173,7 +173,7 @@ int initConfig()
     fclose(file);
     configInitialized = true;
 
-    return 0;
+    return;
 }
 
 void resetConfig()
