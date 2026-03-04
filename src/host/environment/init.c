@@ -108,8 +108,8 @@ static void setValue(const char* key, const char* value)
         config.beta = strtof(value, &endptr);
     else if(strcmp(key, "leafWrapThreshold") == 0)
         config.leafWrapThreshold = strtoul(value, &endptr, 10);
-    else if(strcmp(key, "overSamplingRate") == 0)
-        config.overSamplingRate = strtoul(value, &endptr, 10);
+    else if(strcmp(key, "oversamplingRate") == 0)
+        config.oversamplingRate = strtoul(value, &endptr, 10);
     else if(strcmp(key, "sketchHeight") == 0)
         config.sketchHeight = strtoul(value, &endptr, 10);
     else if(strcmp(key, "chunkSize") == 0)
@@ -125,7 +125,7 @@ void printConfig()
     printf("  alpha = %.2f\n", config.alpha);
     printf("  beta = %.2f\n", config.beta);
     printf("  leafWrapThreshold = %u\n", config.leafWrapThreshold);
-    printf("  overSamplingRate = %u\n", config.overSamplingRate);
+    printf("  oversamplingRate = %u\n", config.oversamplingRate);
     printf("  sketchHeight = %u\n", config.sketchHeight);
     printf("  chunkSize = %u\n", config.chunkSize);
 }
@@ -184,7 +184,7 @@ void resetConfig()
     config.alpha = DEFAULT_ALPHA;
     config.beta = DEFAULT_BETA;
     config.leafWrapThreshold = DEFAULT_LEAF_WRAP_THRESHOLD;
-    config.overSamplingRate = DEFAULT_OVERSAMPLING_RATE;
+    config.oversamplingRate = DEFAULT_OVERSAMPLING_RATE;
     config.sketchHeight = DEFAULT_SKETCH_HEIGHT;
     config.chunkSize = DEFAULT_CHUNK_SIZE;
     configInitialized = true;
