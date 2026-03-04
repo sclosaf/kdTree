@@ -23,7 +23,7 @@ typedef enum nodeType
 
 typedef struct point
 {
-    float coords[getConfig()->dimensions];
+    float* coords;
 } point;
 
 typedef struct KDNode
