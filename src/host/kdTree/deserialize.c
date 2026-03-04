@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "environment/init.h"
+
 #include "kdTree/deserialize.h"
 
 KDNode* deserializeTree(void* data, size_t size)
@@ -62,7 +64,7 @@ KDNode* deserializeNode(uint8_t** ptr, uint8_t* end)
 
             for(size_t i = 0; i < node->data.leaf.pointsCount; ++i)
             {
-                memcpy(node->data.leaf.points[i].coords, *ptr, DIMENSIONS * sizeof(float));
+                memcpy(node->data.leaf.points[i].coords, *ptr, getConfig()->dimensions * sizeof(float));
                 (*ptr) += DIMENSIONS * sizeof(float);
             }
         }

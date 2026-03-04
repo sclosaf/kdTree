@@ -20,10 +20,12 @@ float findMedian(point** points, size_t start, size_t end, uint8_t dim)
 
 uint8_t findSplitDim(point** points, size_t start, size_t end)
 {
-    float* minCoords;
-    float* maxCoords;
+    uint32_t dims = getConfig()->dimensions;
 
-    for(size_t i = 0; i < getConfig()->dimensions; ++i)
+    float* minCoords = malloc(dims * sizeof(float));
+    float* maxCoords = malloc(dims * sizeof(float));
+
+    for(size_t i = 0; i < dims; ++i)
     {
         minCoords[i] = INFINITY;
         maxCoords[i] = -INFINITY;
@@ -31,7 +33,7 @@ uint8_t findSplitDim(point** points, size_t start, size_t end)
 
     for(size_t i = start; i <= end; ++i)
     {
-        for(size_t j = 0; j < getConfig()->dimensions; ++j)
+        for(size_t j = 0; j < dims; ++j)
         {
             float val = points[i]->coords[j];
             if(val < minCoords[j])
@@ -45,7 +47,7 @@ uint8_t findSplitDim(point** points, size_t start, size_t end)
     uint8_t splitDim = 0;
     float maxRange = maxCoords[0] - minCoords[0];
 
-    for(size_t i = 1; i < getConfig()->dimensions; ++i)
+    for(size_t i = 1; i < dims; ++i)
     {
         float range = maxCoords[i] - minCoords[i];
 
