@@ -6,6 +6,8 @@
 #include "kdTree/utils.h"
 #include "kdTree/free.h"
 
+#include "environment/init.h"
+
 float findMedian(point** points, size_t start, size_t end, uint8_t dim)
 {
     size_t size = end - start + 1;
@@ -18,9 +20,10 @@ float findMedian(point** points, size_t start, size_t end, uint8_t dim)
 
 uint8_t findSplitDim(point** points, size_t start, size_t end)
 {
-    float minCoords[DIMENSIONS], maxCoords[DIMENSIONS];
+    float* minCoords;
+    float* maxCoords;
 
-    for(size_t i = 0; i < DIMENSIONS; ++i)
+    for(size_t i = 0; i < getConfig()->dimensions; ++i)
     {
         minCoords[i] = INFINITY;
         maxCoords[i] = -INFINITY;
@@ -28,7 +31,7 @@ uint8_t findSplitDim(point** points, size_t start, size_t end)
 
     for(size_t i = start; i <= end; ++i)
     {
-        for(size_t j = 0; j < DIMENSIONS; ++j)
+        for(size_t j = 0; j < getConfig()->dimensions; ++j)
         {
             float val = points[i]->coords[j];
             if(val < minCoords[j])
@@ -71,7 +74,7 @@ uint32_t getBucket(KDNode* sketch, point* p)
     KDNode* current = sketch;
     uint16_t level = 0;
 
-    while(current && level < SKETCH_HEIGHT && current->type != LEAF)
+    while(current && level < getConfig()->sketchHeight && current->type != LEAF)
     {
         id <<= 1;
         if(p->coords[current->data.internal.splitDim] >= current->data.internal.splitValue)
