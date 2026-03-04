@@ -5,6 +5,8 @@
 #include "kdTree/serialize.h"
 #include "kdTree/deserialize.h"
 
+#include "environment/init.h"
+
 void sendSketchToAllDpus(DPUContext* ctx, KDNode* sketch)
 {
     size_t sketchSize;
@@ -136,7 +138,7 @@ void scatterReplica(DPUContext* dpuCtx, KDNode** subtrees, size_t P, size_t tota
         size_t subtreeSize = calculateSubtreeSize(allNodes[i]);
 
         uint8_t level = 0;
-        if(subtreeSize > LEAF_WRAP_THRESHOLD)
+        if(subtreeSize > getConfig()->leafWrapThreshold)
         {
             size_t current = totalPoints;
             while(current > LEAF_WRAP_THRESHOLD && subtreeSize < current)
