@@ -81,7 +81,7 @@ void serializeNodeData(KDNode* node, uint8_t** ptr)
             for(size_t i = 0; i < count; i++)
             {
                 memcpy(*ptr, node->data.leaf.points[i].coords, getConfig()->dimensions * sizeof(float));
-                *ptr += getConfig->dimensions * sizeof(float);
+                *ptr += getConfig()->dimensions * sizeof(float);
             }
         }
     }
