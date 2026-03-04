@@ -14,6 +14,7 @@ typedef struct Config
     uint16_t chunkSize;
 } Config;
 
+const Config* getConfig();
 void initConfig();
 void resetConfig();
 void printConfig();

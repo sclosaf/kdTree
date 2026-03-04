@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "environment/constants.h"
+#include "environment/init.h"
 
 typedef enum nodeType
 {
@@ -22,7 +23,7 @@ typedef enum nodeType
 
 typedef struct point
 {
-    float coords[DIMENSIONS];
+    float coords[getConfig()->dimensions];
 } point;
 
 typedef struct KDNode
