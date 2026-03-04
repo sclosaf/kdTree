@@ -141,7 +141,7 @@ void scatterReplica(DPUContext* dpuCtx, KDNode** subtrees, size_t P, size_t tota
         if(subtreeSize > getConfig()->leafWrapThreshold)
         {
             size_t current = totalPoints;
-            while(current > LEAF_WRAP_THRESHOLD && subtreeSize < current)
+            while(current > getConfig()->leafWrapThreshold && subtreeSize < current)
             {
                 ++level;
                 current = (size_t)log2(current);
