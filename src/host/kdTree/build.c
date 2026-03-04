@@ -232,7 +232,7 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
         for(size_t j = 0; j < perPimCounts[i]; ++j)
             memcpy(&pointData[j * getConfig()->dimensions], perPimPoints[i][j]->coords, getConfig()->dimensions* sizeof(float));
 
-        int ret = dpuTransferDataToDpu(dpuCtx, i, pointData, perPimCounts[i] * DIMENSIONS * sizeof(float), DPU_XFER_DEFAULT);
+        int ret = dpuTransferDataToDpu(dpuCtx, i, pointData, perPimCounts[i] * getConfig()->dimensions * sizeof(float), DPU_XFER_DEFAULT);
         free(pointData);
         if(ret != 0)
         {
@@ -520,7 +520,7 @@ Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
         return NULL;
     }
 
-    for(size_t j = 0; j < CHUNK_SIZE; ++j)
+    for(size_t j = 0; j < getConfig()->chunkSize; ++j)
     {
         size_t start = bucketOffsets[j];
         size_t end = (j < chunkSize- 1) ? bucketOffsets[j + 1] : size;
