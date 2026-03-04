@@ -24,7 +24,7 @@ KDTree* onChipBuild(point** points, size_t size)
     tree->totalPoints = size;
     tree->totalNodes = 0;
 
-    if(size < getConfig()->chunkSize() * getConfig()->overSamplingRate)
+    if(size < getConfig()->chunkSize * getConfig()->overSamplingRate)
         tree->root = buildTreeParallelPlain(points, 0, size - 1, 0);
     else
         tree->root = buildTreeParallel(points, size, 0);
@@ -230,7 +230,7 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
         }
 
         for(size_t j = 0; j < perPimCounts[i]; ++j)
-            memcpy(&pointData[j * DIMENSIONS], perPimPoints[i][j]->coords, DIMENSIONS * sizeof(float));
+            memcpy(&pointData[j * getConfig()->dimensions], perPimPoints[i][j]->coords, getConfig()->dimensions* sizeof(float));
 
         int ret = dpuTransferDataToDpu(dpuCtx, i, pointData, perPimCounts[i] * DIMENSIONS * sizeof(float), DPU_XFER_DEFAULT);
         free(pointData);
@@ -471,7 +471,7 @@ Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
         return NULL;
     }
 
-    uint32_t* bucketOffsets = (uint32_t*)malloc(CHUNK_SIZE * sizeof(uint32_t));
+    uint32_t* bucketOffsets = (uint32_t*)malloc(getConfig()->chunkSize * sizeof(uint32_t));
 
     if(!bucketOffsets)
     {
