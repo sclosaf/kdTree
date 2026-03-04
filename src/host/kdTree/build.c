@@ -21,7 +21,7 @@ KDTree* onChipBuild(point** points, size_t size)
     tree->totalPoints = size;
     tree->totalNodes = 0;
 
-    if(size < CHUNK_SIZE * OVERSAMPLING_RATE)
+    if(size < getConfig()->chunkSize() * getConfig()->overSamplingRate)
         tree->root = buildTreeParallelPlain(points, 0, size - 1, 0);
     else
         tree->root = buildTreeParallel(points, size, 0);
@@ -66,7 +66,7 @@ KDGroup** logStarDecompose(KDTree* tree)
     uint8_t numGroups = 0;
 
     size_t current = totalSize;
-    while(current > LEAF_WRAP_THRESHOLD)
+    while(current > getConfig()->leafWrapThreshold)
     {
         ++numGroups;
         current = (size_t)log2(current);
@@ -127,8 +127,8 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
     if(!alloc)
         return NULL;
 
-    size_t oversample = OVERSAMPLING_RATE * OVERSAMPLING_RATE * OVERSAMPLING_RATE;
-    size_t sampleCount = P * oversample;
+    size_t rate = getConfig()->overSamplingRate;
+    size_t sampleCount = P * rate;
 
     point** samples = malloc(sampleCount * sizeof(point*));
     if(!samples)
@@ -203,8 +203,7 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
 
     DPUKernelArgs args = {
         .totalPoints = 0,
-        .pointsPerDpu = 0,
-        .dim = DIMENSIONS
+        .pointsPerDpu = 0
     };
 
     for(size_t i = 0; i < P; ++i)
@@ -212,7 +211,7 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
         if(perPimCounts[i] == 0)
             continue;
 
-        float* pointData = malloc(perPimCounts[i] * DIMENSIONS * sizeof(float));
+        float* pointData = malloc(perPimCounts[i] * getConfig()->dimensions * sizeof(float));
 
         if(!pointData)
         {
@@ -401,23 +400,20 @@ void copyNode(KDNode* dest, KDNode* src)
 
 KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth)
 {
-    if(size <= LEAF_WRAP_THRESHOLD)
+    if(size <= getConfig()->leafWrapThreshold)
         return createLeafNode(points, size);
 
-    size_t sampleCount = CHUNK_SIZE * OVERSAMPLING_RATE;
+    size_t sampleCount = getConfig()->chunkSize * getConfig()->overSamplingRate;
     point** samples = (point**)malloc(sampleCount * sizeof(point*));
     if(!samples)
         return NULL;
 
     #pragma omp parallel for
     for(size_t i = 0; i < sampleCount; ++i)
-    {
-        size_t index = rand() % size;
-        samples[i] = points[index];
-    }
+        samples[i] = points[rand() % size];
 
     KDNode* sketch = NULL;
-    buildSketch(&sketch, samples, sampleCount, SKETCH_HEIGHT);
+    buildSketch(&sketch, samples, sampleCount, getConfig()->sketchHeight);
     free(samples);
 
     Bucket* buckets = sievePoints(points, size, sketch);
@@ -428,11 +424,11 @@ KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth)
     }
 
     #pragma omp parallel for
-    for(size_t i = 0; i < CHUNK_SIZE; ++i)
+    for(size_t i = 0; i < getConfig()->chunkSize; ++i)
     {
         if(buckets[i].size > 0)
         {
-            KDNode* subtree = buildTreeParallel(buckets[i].bucket, buckets[i].size, depth + SKETCH_HEIGHT);
+            KDNode* subtree = buildTreeParallel(buckets[i].bucket, buckets[i].size, depth + getConfig()->sketchHeight);
             attachSubtree(sketch, i, subtree);
         }
     }
@@ -443,7 +439,8 @@ KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth)
 
 Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 {
-    size_t numChunks = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+    uint16_t chunkSize = getConfig()->chunkSize;
+    size_t numChunks = (size + chunkSize - 1) / chunkSize;
 
     uint32_t** countMatrix = (uint32_t**)malloc(numChunks * sizeof(uint32_t*));
     if(!countMatrix)
@@ -452,10 +449,10 @@ Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
     #pragma omp parallel for
     for(size_t i = 0; i < numChunks; ++i)
     {
-        countMatrix[i] = (uint32_t*)calloc(CHUNK_SIZE, sizeof(uint32_t));
+        countMatrix[i] = (uint32_t*)calloc(chunkSize, sizeof(uint32_t));
 
-        size_t chunkStart = i * CHUNK_SIZE;
-        size_t chunkEnd = (chunkStart + CHUNK_SIZE < size) ? (chunkStart + CHUNK_SIZE) : size;
+        size_t chunkStart = i * chunkSize;
+        size_t chunkEnd = (chunkStart + chunkSize< size) ? (chunkStart + chunkSize) : size;
 
         for(size_t j = chunkStart; j < chunkEnd; ++j)
         {
@@ -464,7 +461,7 @@ Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
         }
     }
 
-    uint32_t** offsetMatrix = computePrefixSum(countMatrix, numChunks, CHUNK_SIZE);
+    uint32_t** offsetMatrix = computePrefixSum(countMatrix, numChunks, chunkSize);
     if(!offsetMatrix)
     {
         freeMatrix((void**)countMatrix, numChunks);
@@ -480,7 +477,7 @@ Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
         return NULL;
     }
 
-    for(size_t j = 0; j < CHUNK_SIZE; ++j)
+    for(size_t j = 0; j < chunkSize; ++j)
         bucketOffsets[j] = offsetMatrix[0][j];
 
     point** sortedPoints = (point**)malloc(size * sizeof(point*));
@@ -495,8 +492,8 @@ Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
     #pragma omp parallel for
     for(size_t i = 0; i < numChunks; ++i)
     {
-        size_t chunkStart = i * CHUNK_SIZE;
-        size_t chunkEnd = (chunkStart + CHUNK_SIZE < size) ? (chunkStart + CHUNK_SIZE) : size;
+        size_t chunkStart = i * chunkSize;
+        size_t chunkEnd = (chunkStart + chunkSize < size) ? (chunkStart + chunkSize) : size;
 
         for(size_t j = chunkStart; j < chunkEnd; ++j)
         {
@@ -509,7 +506,7 @@ Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 
     memcpy(points, sortedPoints, size * sizeof(point*));
 
-    Bucket* buckets = (Bucket*)malloc(CHUNK_SIZE * sizeof(Bucket));
+    Bucket* buckets = (Bucket*)malloc(chunkSize * sizeof(Bucket));
 
     if(!buckets)
     {
@@ -523,7 +520,7 @@ Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
     for(size_t j = 0; j < CHUNK_SIZE; ++j)
     {
         size_t start = bucketOffsets[j];
-        size_t end = (j < CHUNK_SIZE - 1) ? bucketOffsets[j + 1] : size;
+        size_t end = (j < chunkSize- 1) ? bucketOffsets[j + 1] : size;
 
         buckets[j].bucket = &points[start];
         buckets[j].size = end - start;
@@ -540,7 +537,7 @@ Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 
 void buildSketch(KDNode** root, point** samples, size_t sampleCount, uint16_t levels)
 {
-    if(levels == 0 || sampleCount <= LEAF_WRAP_THRESHOLD)
+    if(levels == 0 || sampleCount <= getConfig()->leafWrapThreshold)
     {
         *root = (KDNode*)malloc(sizeof(KDNode));
         if(!*root)
@@ -626,7 +623,7 @@ KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, uint16_
 {
     size_t size = end - start + 1;
 
-    if(size <= LEAF_WRAP_THRESHOLD)
+    if(size <= getConfig()->leafWrapThreshold)
         return createLeafNode(&points[start], size);
 
     KDNode* node = (KDNode*)malloc(sizeof(KDNode));
@@ -688,11 +685,11 @@ KDNode* createLeafNode(point** points, size_t size)
 
 void attachSubtree(KDNode* sketch, uint16_t bucketId, KDNode* subtree)
 {
-    if(!sketch || bucketId >= CHUNK_SIZE)
+    if(!sketch || bucketId >= getConfig()->chunkSize)
         return;
 
     KDNode* current = sketch;
-    for(uint16_t level = SKETCH_HEIGHT - 1; level > 0; level--)
+    for(uint16_t level = getConfig()->sketchHeight - 1; level > 0; level--)
     {
         bool bit = (bucketId >> level) & 1;
 

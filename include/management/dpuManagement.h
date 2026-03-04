@@ -15,7 +15,6 @@ typedef struct
 {
     uint32_t totalPoints;
     uint32_t pointsPerDpu;
-    uint32_t dim;
 } DPUKernelArgs;
 
 DPUContext* dpuInitContext(uint32_t nDpus);
