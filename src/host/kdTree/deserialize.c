@@ -65,7 +65,7 @@ KDNode* deserializeNode(uint8_t** ptr, uint8_t* end)
             for(size_t i = 0; i < node->data.leaf.pointsCount; ++i)
             {
                 memcpy(node->data.leaf.points[i].coords, *ptr, getConfig()->dimensions * sizeof(float));
-                (*ptr) += DIMENSIONS * sizeof(float);
+                (*ptr) += getConfig()->dimensions * sizeof(float);
             }
         }
         else
