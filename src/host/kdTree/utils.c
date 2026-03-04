@@ -45,7 +45,7 @@ uint8_t findSplitDim(point** points, size_t start, size_t end)
     uint8_t splitDim = 0;
     float maxRange = maxCoords[0] - minCoords[0];
 
-    for(size_t i = 1; i < DIMENSIONS; ++i)
+    for(size_t i = 1; i < getConfig()->dimensions; ++i)
     {
         float range = maxCoords[i] - minCoords[i];
 
