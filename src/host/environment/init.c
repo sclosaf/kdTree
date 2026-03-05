@@ -33,7 +33,7 @@ const Config* getConfig()
     return &config;
 }
 
-static char* getProjectRoot()
+char* getProjectRoot()
 {
     static char root[PATH_MAX];
     char path[PATH_MAX];

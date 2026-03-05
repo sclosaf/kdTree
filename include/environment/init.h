@@ -21,4 +21,6 @@ void initConfig();
 void resetConfig();
 void printConfig();
 
+char* getProjectRoot()
+
 #endif
