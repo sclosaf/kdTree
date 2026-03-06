@@ -33,7 +33,7 @@ typedef struct CounterStatistics
         float minRatio;
         float maxRatio;
         size_t zeroCounters;
-} CounterStatics;
+} CounterStatistics;
 
 typedef struct Issues
 {

@@ -276,7 +276,7 @@ void printNodeTree(KDNode* node, int level, const char* prefix, int isLast)
     }
 }
 
-void printNode(KDNode* node, int level, PrintStyle style)
+void printNode(KDNode* node, int level, Style style)
 {
     switch(style)
     {
@@ -292,7 +292,7 @@ void printNode(KDNode* node, int level, PrintStyle style)
     }
 }
 
-void printKDTree(KDNode* root, PrintStyle style)
+void printKDTree(KDNode* root, Style style)
 {
     if(!root)
     {
@@ -345,7 +345,7 @@ void printKDTree(KDNode* root, PrintStyle style)
     printSeparator();
 }
 
-void printKDTreeOnDpu(DPUContext* dpuCtx, uint32_t dpuId, PrintStyle style)
+void printKDTreeOnDpu(DPUContext* dpuCtx, uint32_t dpuId, Style style)
 {
     if(!dpuCtx || dpuId >= dpuCtx->nDpus)
     {
