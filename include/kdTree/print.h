@@ -53,7 +53,7 @@ void printNodeBrief(KDNode* node);
 void printNodeDetailed(KDNode* node);
 void printNodeTree(KDNode* node, int level, const char* prefix, bool isLast);
 void validateTreeStructure(KDNode* root);
-void checkApproximateCounters(KDNode* root, size_t totalSize);
+void checkApproximateCounters(KDNode* root);
 void printMemoryLayout(DPUContext* dpuCtx);
 
 #endif
