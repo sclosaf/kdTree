@@ -17,10 +17,16 @@ point* readDataset()
     if(!root)
         return NULL;
 
-    char datasetPath[PATH_MAX];
-    snprintf(datasetPath, sizeof(datasetPath), "%s/data/dataset.bin", root);
+    size_t pathLen = strlen(root) + strlen("/data/dataset.bin") + 1;
+    char* datasetPath = (char*)malloc(pathLen);
+    if(!datasetPath)
+        return NULL;
+
+    snprintf(datasetPath, pathLen, "%s/data/dataset.bin", root);
 
     FILE* file = fopen(datasetPath, "rb");
+    free(datasetPath);
+
     if(!file)
         return NULL;
 
