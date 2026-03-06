@@ -6,6 +6,7 @@
 #include "kdTree/print.h"
 #include "kdTree/serialize.h"
 #include "kdTree/deserialize.h"
+#include "kdTree/distribute.h"
 #include "kdTree/utils.h"
 #include "kdTree/counters.h"
 #include "kdTree/free.h"
