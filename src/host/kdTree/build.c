@@ -9,6 +9,7 @@
 #include "kdTree/build.h"
 #include "kdTree/utils.h"
 #include "kdTree/free.h"
+#include "kdTree/counters.h"
 
 #include "management/dpuManagement.h"
 
@@ -34,6 +35,8 @@ KDTree* onChipBuild(point** points, size_t size)
         free(tree);
         return NULL;
     }
+
+    initializeSubtreeCounters(tree->root, size);
 
     KDGroup** groups = logStarDecompose(tree);
     if(!groups)
@@ -281,6 +284,10 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
         return NULL;
     }
 
+    for(size_t i = 0; i < P; ++i)
+        if(subtrees[i])
+            initializeSubtreeCounters(subtrees[i], n);
+
     scatterReplica(dpuCtx, subtrees, P, n, cacheForest, alloc);
 
     freeDpuAllocation(alloc);
@@ -440,6 +447,9 @@ KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth)
             attachSubtree(sketch, i, subtree);
         }
     }
+
+    if(sketch)
+        initializeSubtreeCounters(sketch, size);
 
     free(buckets);
     return sketch;
