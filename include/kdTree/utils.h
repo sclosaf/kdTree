@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "kdTree/types.h"
+#include "environment/init.h"
 
 float findMedian(point** points, size_t start, size_t end, uint8_t dim);
 uint8_t findSplitDim(point** points, size_t start, size_t end);
