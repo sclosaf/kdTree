@@ -3,6 +3,8 @@
 
 #include "kdTree/types.h"
 
+#include "management/dpuManagement.h"
+
 typedef struct ReplicaInfo
 {
     uint32_t dpuId;
