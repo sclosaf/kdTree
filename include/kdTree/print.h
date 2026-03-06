@@ -5,7 +5,6 @@
 #include <stdbool.h>
 
 #include "kdTree/types.h"
-#include "management/dpuManagement.h"
 
 typedef enum Style
 {
@@ -14,7 +13,7 @@ typedef enum Style
     DETAILED,
 } Style;
 
-typedef struct nodeStatistics
+typedef struct NodeStatistics
 {
     size_t internal;
     size_t leaf;
@@ -24,16 +23,16 @@ typedef struct nodeStatistics
     uint32_t totalCounter;
     size_t maxLeafSize;
     double avgLeafSize;
-} nodeStatistics;
+} NodeStatistics;
 
-typedef struct counterStatistics
+typedef struct CounterStatistics
 {
         size_t checked;
         size_t inconsistent;
         float minRatio;
         float maxRatio;
         size_t zeroCounters;
-} counterStatics;
+} CounterStatics;
 
 typedef struct Issues
 {

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+
 #include "kdTree/types.h"
 
 point* readDataset();

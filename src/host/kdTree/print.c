@@ -9,6 +9,8 @@
 #include "kdTree/utils.h"
 #include "kdTree/counters.h"
 
+#include "management/dpuManagement.h"
+
 static void printIndent(int level)
 {
     for(int i = 0; i < level; ++i)
@@ -35,7 +37,7 @@ static void printSeparator()
     printf("\n");
 }
 
-static void computeStats(KDNode* node, nodeStatistics* stats, int depth)
+static void computeStats(KDNode* node, NodeStatistics* stats, int depth)
 {
     if(!node || !stats)
         return;
@@ -62,7 +64,7 @@ static void computeStats(KDNode* node, nodeStatistics* stats, int depth)
     }
 }
 
-static void checkNode(KDNode* node, counterStatistics* stats)
+static void checkNode(KDNode* node, CounterStatistics* stats)
 {
     if(!node || node->type == LEAF || !stats)
         return;
@@ -395,7 +397,7 @@ void printKDTreeStats(KDNode* root)
     if(!root)
         return;
 
-    Statistics stats =
+    NodeStatistics stats =
     {
         .internal = 0,
         .leaf = 0,
@@ -499,7 +501,7 @@ void checkApproximateCounters(KDNode* root)
     if(!root)
         return;
 
-    counterStatistics stats = {
+    CounterStatistics stats = {
         .checked = 0,
         .inconsistent = 0,
         .minRatio = 1000.0f,

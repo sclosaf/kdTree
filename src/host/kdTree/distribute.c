@@ -7,6 +7,8 @@
 
 #include "environment/init.h"
 
+#include "management/dpuManagement.h"
+
 void sendSketchToAllDpus(DPUContext* ctx, KDNode* sketch)
 {
     size_t sketchSize;

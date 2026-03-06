@@ -5,7 +5,6 @@
 #include <stddef.h>
 
 #include "environment/constants.h"
-#include "environment/init.h"
 
 typedef enum nodeType
 {
