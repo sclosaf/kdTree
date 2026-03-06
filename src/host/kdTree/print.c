@@ -8,6 +8,7 @@
 #include "kdTree/deserialize.h"
 #include "kdTree/utils.h"
 #include "kdTree/counters.h"
+#include "kdTree/free.h"
 
 #include "management/dpuManagement.h"
 
