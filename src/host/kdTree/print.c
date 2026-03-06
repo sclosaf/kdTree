@@ -13,6 +13,17 @@
 
 #include "management/dpuManagement.h"
 
+static void printSeparator()
+{
+    printf("\n");
+
+    for(int i = 0; i < 40; ++i)
+        printf("=");
+
+    printf("\n");
+}
+
+
 static void computeStats(KDNode* node, NodeStatistics* stats, int depth)
 {
     if(!node || !stats)
