@@ -208,7 +208,7 @@ void printNodeDetailed(KDNode* node)
     }
 }
 
-void printNodeTree(KDNode* node, int level, const char* prefix, int isLast)
+void printNodeTree(KDNode* node, int level, const char* prefix, bool isLast)
 {
     if(!node)
     {
