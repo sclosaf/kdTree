@@ -13,32 +13,6 @@
 
 #include "management/dpuManagement.h"
 
-static void printIndent(int level)
-{
-    for(int i = 0; i < level; ++i)
-        printf("  ");
-}
-
-static void printHorizontalLine(int width)
-{
-    printf("\n");
-
-    for(int i = 0; i < width; ++i)
-        printf("─");
-
-    printf("\n");
-}
-
-static void printSeparator()
-{
-    printf("\n");
-
-    for(int i = 0; i < 50; ++i)
-        printf("=");
-
-    printf("\n");
-}
-
 static void computeStats(KDNode* node, NodeStatistics* stats, int depth)
 {
     if(!node || !stats)
@@ -484,7 +458,7 @@ void validateTreeStructure(KDNode* root)
     Issues issues = {0};
 
     printf("\nVALIDATING TREE STRUCTURE\n");
-    validate(root, NULL, &issues);
+    validateNode(root, NULL, &issues);
 
     printf("  ├─ Nodes visited: %zu\n", issues.visited);
     printf("  ├─ Invalid parents: %zu\n", issues.invalidParents);
