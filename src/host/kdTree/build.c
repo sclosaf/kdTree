@@ -358,6 +358,9 @@ KDNode* buildReplicatedTree(KDGroup** groups, uint8_t groupLevel)
         KDNode* templateNode = currentGroup->rootNodes[0];
         node->data.internal.splitDim = templateNode->data.internal.splitDim;
         node->data.internal.splitValue = templateNode->data.internal.splitValue;
+        node->data.internal.approximateCounter = 0;
+        node->data.internal.left = NULL;
+        node->data.internal.right = NULL;
 
         node->data.internal.left = buildReplicatedTree(groups, currentLevel + 1);
         node->data.internal.right = buildReplicatedTree(groups, currentLevel + 1);
@@ -367,6 +370,10 @@ KDNode* buildReplicatedTree(KDGroup** groups, uint8_t groupLevel)
 
         if(node->data.internal.right)
             node->data.internal.right->parent = node;
+
+        uint32_t leftSize = node->data.internal.left ? getNodeSize(node->data.internal.left) : 0;
+        uint32_t rightSize = node->data.internal.right ? getNodeSize(node->data.internal.right) : 0;
+        node->data.internal.approximateCounter = leftSize + rightSize;
     }
 
     return node;
@@ -384,6 +391,7 @@ void copyNode(KDNode* dest, KDNode* src)
     {
         dest->data.internal.splitDim = src->data.internal.splitDim;
         dest->data.internal.splitValue = src->data.internal.splitValue;
+        dest->data.internal.approximateCounter = src->data.internal.approximateCounter;
         dest->data.internal.left = NULL;
         dest->data.internal.right = NULL;
     }
@@ -393,10 +401,7 @@ void copyNode(KDNode* dest, KDNode* src)
         dest->data.leaf.points = (point*)malloc(dest->data.leaf.pointsCount * sizeof(point));
 
         if(dest->data.leaf.points)
-        {
-            memcpy(dest->data.leaf.points, src->data.leaf.points,
-                   dest->data.leaf.pointsCount * sizeof(point));
-        }
+            memcpy(dest->data.leaf.points, src->data.leaf.points, dest->data.leaf.pointsCount * sizeof(point));
     }
 }
 
@@ -564,23 +569,21 @@ void buildSketch(KDNode** root, point** samples, size_t sampleCount, uint16_t le
     (*root)->type = INTERNAL;
     (*root)->data.internal.splitDim = splitDim;
     (*root)->data.internal.splitValue = splitValue;
+    (*root)->data.internal.approximateCounter = 0;
+    (*root)->data.internal.left = NULL;
+    (*root)->data.internal.right = NULL;
     (*root)->parent = NULL;
 
     size_t leftCount = 0;
     size_t rightCount = 0;
 
     point** leftSamples = (point**)malloc(sampleCount * sizeof(point*));
-    if(!leftSamples)
-    {
-        free(*root);
-        *root = NULL;
-        return;
-    }
-
     point** rightSamples = (point**)malloc(sampleCount * sizeof(point*));
-    if(!rightSamples)
+
+    if(!leftSamples || !rightSamples)
     {
         free(leftSamples);
+        free(rightSamples);
         free(*root);
         *root = NULL;
         return;
@@ -618,6 +621,10 @@ void buildSketch(KDNode** root, point** samples, size_t sampleCount, uint16_t le
     if((*root)->data.internal.right)
         (*root)->data.internal.right->parent = *root;
 
+    uint32_t leftSize = (*root)->data.internal.left ? getNodeSize((*root)->data.internal.left) : 0;
+    uint32_t rightSize = (*root)->data.internal.right ? getNodeSize((*root)->data.internal.right) : 0;
+    (*root)->data.internal.approximateCounter = leftSize + rightSize;
+
     free(leftSamples);
     free(rightSamples);
 }
@@ -640,6 +647,9 @@ KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, uint16_
     node->parent = NULL;
     node->data.internal.splitDim = splitDim;
     node->data.internal.splitValue = splitValue;
+    node->data.internal.approximateCounter = 0;
+    node->data.internal.left = NULL;
+    node->data.internal.right = NULL;
 
     size_t mid = parallelPartition(points, start, end, splitDim, splitValue);
 
@@ -658,6 +668,11 @@ KDNode* buildTreeParallelPlain(point** points, size_t start, size_t end, uint16_
                 node->data.internal.right->parent = node;
         }
     }
+
+    uint32_t leftSize = node->data.internal.left ? getNodeSize(node->data.internal.left) : 0;
+    uint32_t rightSize = node->data.internal.right ? getNodeSize(node->data.internal.right) : 0;
+
+    node->data.internal.approximateCounter = leftSize + rightSize;
 
     return node;
 }

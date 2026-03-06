@@ -255,3 +255,14 @@ uint32_t** computePrefixSum(uint32_t** matrix, size_t rows, size_t cols)
 
     return result;
 }
+
+uint32_t getNodeSize(KDNode* node)
+{
+    if(!node)
+        return 0;
+
+    if(node->type == LEAF)
+        return node->data.leaf.pointsCount;
+
+    return node->data.internal.approximateCounter;
+}

@@ -15,10 +15,7 @@ point* readDataset()
     char* root = getProjectRoot();
 
     if(!root)
-    {
-        fprintf(stderr, "Error: Could not determine project root\n");
         return NULL;
-    }
 
     char datasetPath[PATH_MAX];
     snprintf(datasetPath, sizeof(datasetPath), "%s/data/dataset.bin", root);

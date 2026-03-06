@@ -21,24 +21,29 @@ KDNode* deserializeNode(uint8_t** ptr, uint8_t* end)
     if(*ptr >= end)
         return NULL;
 
+    uint8_t type = **ptr;
+    ++(*ptr);
+
     KDNode* node = malloc(sizeof(KDNode));
     if(!node)
         return NULL;
 
-    node->type = (**ptr == 0) ? INTERNAL : LEAF;
-    ++(*ptr);
-
-    uint32_t subtreeSize;
-    memcpy(&subtreeSize, *ptr, sizeof(uint32_t));
-    (*ptr) += sizeof(uint32_t);
+    node->type = (type == 0) ? INTERNAL : LEAF;
+    node->parent = NULL;
 
     if(node->type == INTERNAL)
     {
+        memcpy(&node->data.internal.approximateCounter, *ptr, sizeof(uint32_t));
+        (*ptr) += sizeof(uint32_t);
+
         node->data.internal.splitDim = **ptr;
         ++(*ptr);
 
         memcpy(&node->data.internal.splitValue, *ptr, sizeof(float));
         (*ptr) += sizeof(float);
+
+        node->data.internal.left = NULL;
+        node->data.internal.right = NULL;
 
         node->data.internal.left = deserializeNode(ptr, end);
         if(node->data.internal.left)
@@ -64,6 +69,17 @@ KDNode* deserializeNode(uint8_t** ptr, uint8_t* end)
 
             for(size_t i = 0; i < node->data.leaf.pointsCount; ++i)
             {
+                node->data.leaf.points[i].coords = malloc(getConfig()->dimensions * sizeof(float));
+                if(!node->data.leaf.points[i].coords)
+                {
+                    for(size_t j = 0; j < i; ++j)
+                        free(node->data.leaf.points[j].coords);
+
+                    free(node->data.leaf.points);
+                    free(node);
+                    return NULL;
+                }
+
                 memcpy(node->data.leaf.points[i].coords, *ptr, getConfig()->dimensions * sizeof(float));
                 (*ptr) += getConfig()->dimensions * sizeof(float);
             }

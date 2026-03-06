@@ -33,6 +33,7 @@ void serializeNodeSize(KDNode* node, size_t* size)
 
     if(node->type == INTERNAL)
     {
+        *size += sizeof(uint32_t);
         *size += 1 + sizeof(float);
 
         serializeNodeSize(node->data.internal.left, size);
@@ -52,10 +53,13 @@ void serializeNodeData(KDNode* node, uint8_t** ptr)
     if(!node)
         return;
 
+    **ptr = (node->type == INTERNAL) ? 0 : 1;
+    ++(*ptr);
+
     if(node->type == INTERNAL)
     {
-        **ptr = 0;
-        ++(*ptr);
+        memcpy(*ptr, &node->data.internal.approximateCounter, sizeof(uint32_t));
+        (*ptr) += sizeof(uint32_t);
 
         **ptr = node->data.internal.splitDim;
         ++(*ptr);
@@ -69,9 +73,6 @@ void serializeNodeData(KDNode* node, uint8_t** ptr)
     }
     else
     {
-        **ptr = 1;
-        ++(*ptr);
-
         uint32_t count = (uint32_t)node->data.leaf.pointsCount;
         memcpy(*ptr, &count, sizeof(uint32_t));
         *ptr += sizeof(uint32_t);

@@ -13,14 +13,6 @@ typedef enum nodeType
     LEAF
 } nodeType;
 
-// typedef struct KDApproxCounter
-// {
-//     uint32_t value;
-//     uint32_t totalTreeSize;
-//     float beta;
-//     uint32_t lastUpdate;
-// } approxCounter;
-
 typedef struct point
 {
     float* coords;
@@ -30,7 +22,6 @@ typedef struct KDNode
 {
     nodeType type;
     struct KDNode* parent;
-    // KDApproxCounter size;
 
     union
     {
@@ -40,6 +31,8 @@ typedef struct KDNode
             float splitValue;
             struct KDNode* left;
             struct KDNode* right;
+
+            uint32_t approximateCounter;
         } internal;
         struct
         {
@@ -61,7 +54,7 @@ typedef struct KDGroup
 typedef struct KDTree
 {
     KDNode* root;
-    size_t totalPoints;
+    uint32_t totalPoints;
     uint16_t totalNodes;
 } KDTree;
 
