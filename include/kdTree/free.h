@@ -2,7 +2,6 @@
 #define KDTREE_FREE_H
 
 #include "kdTree/types.h"
-#include "kdTree/distribute.h"
 
 void freeKDTree(KDNode* node);
 void freeMatrix(void** matrix, size_t rows);

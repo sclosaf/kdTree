@@ -1,5 +1,6 @@
 #include <stdlib.h>
 
+#include "kdTree/distribute.h"
 #include "kdTree/free.h"
 
 void freeKDTree(KDNode* node)
@@ -34,6 +35,7 @@ void freeMatrix(void** matrix, size_t rows)
         if(matrix[i])
             free(matrix[i]);
     }
+
     free(matrix);
 }
 
