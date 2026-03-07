@@ -9,6 +9,7 @@
 
 #include "environment/init.h"
 #include "environment/constants.h"
+#include "environment/logger.h"
 
 static Config config =
 {
@@ -114,6 +115,40 @@ static void setValue(const char* key, const char* value)
         config.sketchHeight = strtoul(value, &endptr, 10);
     else if(strcmp(key, "chunkSize") == 0)
         config.chunkSize = strtoul(value, &endptr, 10);
+    else if(strcmp(key, "stream") == 0)
+    {
+        if(strlen(value) == 0 || strcmp(value, "stdout") == 0)
+            setStream(stdout);
+        else
+        {
+            char logPath[512];
+            const char* root = getProjectRoot();
+
+            if(root != NULL)
+            {
+                snprintf(logPath, sizeof(logPath), "%s/log/%s", root, value);
+
+                FILE* fileStream = fopen(logPath, "a");
+                if(fileStream != NULL)
+                    setStream(fileStream);
+                else
+                    setStream(stdout);
+            }
+            else
+            {
+                setStream(stdout);
+            }
+        }
+    }
+    else if(strcmp(key, "severity") == 0)
+    {
+        if(strcmp(value, "ERROR") == 0)
+            setVerbosity(ERROR);\
+        else if(strcmp(value, "WARNING") == 0)
+            setVerbosity(WARNING);
+        else if(strcmp(value, "DEBUG") == 0)
+            setVerbosity(DEBUG);
+    }
 }
 
 void printConfig()
