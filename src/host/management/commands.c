@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <time.h>
+#include <ctype.h>
+#include <stdint.h>
 
 #include "cli/commands.h"
 #include "management/logging.h"
@@ -10,7 +11,7 @@
 
 static CommandRegistry* registry = NULL;
 
-static CommandType getCommandType(const char* cmd)
+static CommandType getCommandType(char* cmd)
 {
     if(!cmd)
         return UNKNOWN;
@@ -30,49 +31,6 @@ static CommandType getCommandType(const char* cmd)
     }
 
     return UNKNOWN;
-}
-
-static char* parseString(const char* arg)
-{
-    if(!arg)
-        return NULL;
-    return strdup(arg);
-}
-
-static uint32_t parseUint32(const char* arg, bool* success)
-{
-    *success = false;
-    if(!arg)
-        return 0;
-
-    char* endptr;
-    long val = strtol(arg, &endptr, 10);
-
-    if(*endptr == '\0' && val >= 0 && val <= UINT32_MAX)
-    {
-        *success = true;
-        return (uint32_t)val;
-    }
-
-    return 0;
-}
-
-static float parseFloat(const char* arg, bool* success)
-{
-    *success = false;
-    if(!arg)
-        return 0.0f;
-
-    char* endptr;
-    float val = strtof(arg, &endptr);
-
-    if(*endptr == '\0')
-    {
-        *success = true;
-        return val;
-    }
-
-    return 0.0f;
 }
 
 void run()
@@ -111,21 +69,9 @@ void run()
             break;
         }
 
-        char* error = NULL;
-        Command* cmd = parseCommand(line, &error);
+        CommandType type = getCommandType(line);
+        int result = executeCommand(type);
 
-        if(!cmd)
-        {
-            if(error)
-            {
-                printf("Error: %s\n", error);
-                free(error);
-            }
-
-            continue;
-        }
-
-        int result = executeCommand(cmd);
         if(result != 0)
             printf("Command execution failed with code %d\n", result);
     }
@@ -135,7 +81,7 @@ void run()
 
 void initCommandRegistry()
 {
-    CommandRegistry* registry = (CommandRegistry*)malloc(sizeof(CommandRegistry));
+    registry = (CommandRegistry*)malloc(sizeof(CommandRegistry));
     if(!registry)
         return;
 
@@ -159,16 +105,14 @@ void initCommandRegistry()
         {CONFIG, "config", "c", "Configure system parameters", handleConfig},
     };
 
-    for(size_t i = 0; i < sizeof(defaultHandlers) / sizeof(defaultHandlers[0]); ++i)
+    uint8_t numHandlers = sizeof(defaultHandlers) / sizeof(defaultHandlers[0]);
+
+    // Alloca un array di handler invece di lista concatenata
+    registry->handlers = (CommandHandler*)malloc(numHandlers * sizeof(CommandHandler));
+    if(registry->handlers)
     {
-        CommandHandler* handler = (CommandHandler*)malloc(sizeof(CommandHandler));
-        if(handler)
-        {
-            memcpy(handler, &defaultHandlers[i], sizeof(CommandHandler));
-            handler->next = registry->handlers;
-            registry->handlers = handler;
-            ++registry->count;
-        }
+        memcpy(registry->handlers, defaultHandlers, numHandlers * sizeof(CommandHandler));
+        registry->count = numHandlers;
     }
 }
 
@@ -182,15 +126,18 @@ void freeCommandRegistry()
     registry = NULL;
 }
 
-void printHelp(void)
+void printHelp()
 {
     if(!registry)
         return;
 
-    printf("Usage: $<command> [options]\n\n");
+    printf("Usage: $ <command>\n\n");
     printf("Available commands:\n");
 
     printAvailableCommands();
+
+    printf("  help, h           Show this help\n");
+    printf("  quit, q           Exit the program\n");
 }
 
 void printAvailableCommands()
@@ -198,7 +145,7 @@ void printAvailableCommands()
     if(!registry || !registry->handlers)
         return;
 
-    for(size_t i = 0; i < registry->count; ++i)
+    for(uint8_t i = 0; i < registry->count; ++i)
     {
         CommandHandler* h = &registry->handlers[i];
         printf("  %-12s", h->longName);
@@ -212,150 +159,18 @@ void printAvailableCommands()
     }
 }
 
-Command* parseCommand(const char* line, char** error)
+int executeCommand(CommandType cmd)
 {
-    if(!line || strlen(line) == 0)
-    {
-        if(error)
-            *error = strdup("Empty command");
-
-        return NULL;
-    }
-
-    char* lineCopy = strdup(line);
-    if(!lineCopy)
-    {
-        if(error)
-            *error = strdup("Memory allocation failed");
-        return NULL;
-    }
-
-    char* cmdStr = strtok(lineCopy, " \t");
-    if(!cmdStr)
-    {
-        free(lineCopy);
-        if(error)
-            *error = strdup("No command specified");
-        return NULL;
-    }
-
-    CommandType type = getCommandType(cmdStr);
-
-    if(cmd->type == UNKNOWN)
-    {
-        free(lineCopy);
-        free(cmd);
-        if(error)
-        {
-            *error = malloc(128);
-            snprintf(*error, 128, "Unknown command: %s", cmdStr);
-        }
-
-        return NULL;
-    }
-
-    char* argv[8];
-    int argc = 0;
-
-    argv[argc++] = cmdStr;
-
-    char* token = strtok(NULL, " \t");
-    while(token && argc < 8)
-    {
-        argv[argc++] = token;
-        token = strtok(NULL, " \t");
-    }
-
-    int i = 1;
-    bool success = false;
-
-    switch(type) // TO COMPLETE
-    {
-        case BUILD:
-            while(i < argc)
-                ++i;
-            break;
-
-        case QUERY:
-            while(i < argc)
-                ++i;
-            break;
-
-        case INSERT:
-            while(i < argc)
-                ++i;
-            break;
-
-        case DELETE:
-            while(i < argc)
-                ++i;
-            break;
-
-        case KNN:
-            while(i < argc)
-                ++i;
-            break;
-
-        case RANGE:
-            while(i < argc)
-                ++i;
-            break;
-
-        case CLUSTER_DPC:
-            while(i < argc)
-                ++i;
-            break;
-
-        case CLUSTER_DBSCAN:
-            while(i < argc)
-                ++i;
-            break;
-
-        case TEST:
-            while(i < argc)
-                ++i;
-            break;
-
-        case BENCHMARK:
-            while(i < argc)
-                ++i;
-            break;
-
-        case INFO:
-            while(i < argc)
-                ++i;
-            break;
-
-        case VALIDATE:
-            while(i < argc)
-                ++i;
-            break;
-
-        case CONFIG:
-            while(i < argc)
-                ++i;
-            break;
-
-        default:
-            break;
-    }
-
-    free(lineCopy);
-    return cmd;
-}
-
-int executeCommand(const CommandType* cmd)
-{
-    if(!cmd)
+    if(!registry)
         return -1;
 
-    for(size_t i = 0; i < registry->count; ++i)
+    for(uint8_t i = 0; i < registry->count; ++i)
     {
         CommandHandler* h = &registry->handlers[i];
         if(h->type == cmd)
-            return h->handler(cmd, NULL);
+            return h->handler();
     }
 
+    printf("Unknown command\n");
     return -1;
 }
-
