@@ -31,11 +31,11 @@ typedef struct NodeStatistics
 
 typedef struct CounterStatistics
 {
-        size_t checked;
-        size_t inconsistent;
-        float minRatio;
-        float maxRatio;
-        size_t zeroCounters;
+    size_t checked;
+    size_t inconsistent;
+    float minRatio;
+    float maxRatio;
+    size_t zeroCounters;
 } CounterStatistics;
 
 typedef struct Issues

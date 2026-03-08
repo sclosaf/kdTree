@@ -32,7 +32,8 @@ typedef struct CommandHandler
     const char* longName;
     const char* shortName;
     const char* description;
-    int (*handler)();
+    const char* subFlag;
+    int (*handler)(void* context);
 } CommandHandler;
 
 typedef struct CommandRegistry
@@ -49,20 +50,20 @@ void freeCommandRegistry();
 void printHelp();
 void printAvailableCommands();
 
-int executeCommand(CommandType cmd);
+int processCommand(CommandType type, char* line)
 
-int handleBuild();
-int handleQuery();
-int handleInsert();
-int handleDelete();
-int handleKNN();
-int handleRange();
-int handleClusterDPC();
-int handleClusterDBSCAN();
-int handleTest();
-int handleBenchmark();
-int handleInfo();
-int handleValidate();
-int handleConfig();
+int handleBuild(void* context);
+int handleQuery(void* context);
+int handleInsert(void* context);
+int handleDelete(void* context);
+int handleKNN(void* context);
+int handleRange(void* context);
+int handleClusterDPC(void* context);
+int handleClusterDBSCAN(void* context);
+int handleTest(void* context);
+int handleBenchmark(void* context);
+int handleInfo(void* context);
+int handleValidate(void* context);
+int handleConfig(void* context);
 
 #endif

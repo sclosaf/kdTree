@@ -70,7 +70,7 @@ void run()
         }
 
         CommandType type = getCommandType(line);
-        int result = executeCommand(type);
+        int result = processCommand(type, line);
 
         if(result != 0)
             printf("Command execution failed with code %d\n", result);
@@ -90,24 +90,23 @@ void initCommandRegistry()
 
     CommandHandler defaultHandlers[] =
     {
-        {BUILD, "build", "b", "Build a new PIM-kd-tree", handleBuild},
-        {QUERY, "query", "que", "Execute point queries", handleQuery},
-        {INSERT, "insert", "i", "Insert points into tree", handleInsert},
-        {DELETE, "delete", "d", "Delete points from tree", handleDelete},
-        {KNN, "knn", "k", "Execute k-nearest neighbor queries", handleKNN},
-        {RANGE, "range", "r", "Execute orthogonal range query", handleRange},
-        {CLUSTER_DPC, "dpc", "dp", "Run Density Peak Clustering", handleClusterDPC},
-        {CLUSTER_DBSCAN, "dbscan", "db", "Run DBSCAN clustering", handleClusterDBSCAN},
-        {TEST, "test", "t", "Run test suite", handleTest},
-        {BENCHMARK, "bench", "be", "Run benchmarks", handleBenchmark},
-        {INFO, "info", "inf", "Display tree information", handleInfo},
-        {VALIDATE, "validate", "v", "Validate tree structure", handleValidate},
-        {CONFIG, "config", "c", "Configure system parameters", handleConfig},
+        {BUILD, "build", "b", "Build a new PIM-kd-tree", NULL, handleBuild},
+        {QUERY, "query", "que", "Execute point queries", NULL, handleQuery},
+        {INSERT, "insert", "i", "Insert points into tree", NULL, handleInsert},
+        {DELETE, "delete", "d", "Delete points from tree", NULL, handleDelete},
+        {KNN, "knn", "k", "Execute k-nearest neighbor queries", NULL, handleKNN},
+        {RANGE, "range", "r", "Execute orthogonal range query", NULL, handleRange},
+        {CLUSTER_DPC, "dpc", "dp", "Run Density Peak Clustering", NULL, handleClusterDPC},
+        {CLUSTER_DBSCAN, "dbscan", "db", "Run DBSCAN clustering", NULL, handleClusterDBSCAN},
+        {TEST, "test", "t", "Run test suite", NULL, handleTest},
+        {BENCHMARK, "bench", "be", "Run benchmarks", NULL, handleBenchmark},
+        {INFO, "info", "inf", "Display tree information", "-c|-d|-t", handleInfo},
+        {VALIDATE, "validate", "v", "Validate tree structure", NULL, handleValidate},
+        {CONFIG, "config", "c", "Configure system parameters", NULL, handleConfig},
     };
 
     uint8_t numHandlers = sizeof(defaultHandlers) / sizeof(defaultHandlers[0]);
 
-    // Alloca un array di handler invece di lista concatenata
     registry->handlers = (CommandHandler*)malloc(numHandlers * sizeof(CommandHandler));
     if(registry->handlers)
     {
@@ -159,18 +158,92 @@ void printAvailableCommands()
     }
 }
 
-int executeCommand(CommandType cmd)
+int parseCommand(CommandType type, char* line)
 {
-    if(!registry)
-        return -1;
-
-    for(uint8_t i = 0; i < registry->count; ++i)
+    if(!line || strlen(line) == 0)
     {
-        CommandHandler* h = &registry->handlers[i];
-        if(h->type == cmd)
-            return h->handler();
+        if(error) *error = strdup("Empty command");
+        return -1;
     }
 
-    printf("Unknown command\n");
-    return -1;
+    char* cmdStr = strtok(line, " \t");
+    if(!cmdStr)
+    {
+        free(line);
+        return -1;
+    }
+
+    char* argv[64];
+    int argc = 0;
+
+    argv[argc++] = cmdStr;
+
+    char* token = strtok(NULL, " \t");
+    while(token && argc < 64)
+    {
+        argv[argc++] = token;
+        token = strtok(NULL, " \t");
+    }
+
+    int i = 1;
+
+    switch(type)
+    {
+        case BUILD:
+            return 0;
+
+        case QUERY:
+            return 0;
+
+        case INSERT:
+            return 0;
+
+        case DELETE:
+            return 0;
+
+        case KNN:
+            return 0;
+
+        case RANGE:
+            return 0;
+
+        case CLUSTER_DPC:
+            return 0;
+
+        case CLUSTER_DBSCAN:
+            return 0;
+
+        case TEST:
+            return 0;
+
+        case BENCHMARK:
+            return 0;
+        case INFO:
+
+            if(argc >= 2)
+                return -1;
+
+            Style* style = (Style*)malloc(sizeof(Style));
+
+            if(strcmp(argv[i], "-c") == 0)
+                *style = COMPACT;
+            else if(strcmp(argv[i], "-d") == 0)
+                *style = DETAILED;
+            else if(strcmp(argv[i], "-t") == 0)
+                *style = TREE;
+            else
+                return -1;
+
+            CommandHandler* h = &registry->handlers[type];
+            return h->handler(style);
+
+        case VALIDATE:
+            return 0;
+
+        case CONFIG:
+            return 0;
+
+        default:
+            return -1;
+    }
 }
