@@ -9,7 +9,7 @@
 
 #include "environment/init.h"
 #include "environment/constants.h"
-#include "management/logger.h"
+#include "management/logging.h"
 
 static Config config =
 {
