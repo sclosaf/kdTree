@@ -46,11 +46,10 @@ void run();
 void initCommandRegistry();
 void freeCommandRegistry();
 
-void printHelp(const CommandRegistry* registry);
-void printAvailableCommands(const CommandRegistry* registry);
+void printHelp();
+void printAvailableCommands();
 
-Command* parseCommand(int argc, char** argv, char** error);
-int executeCommand(const CommandType* cmd);
+int executeCommand(CommandType* cmd);
 
 int handleBuild();
 int handleQuery();
