@@ -218,8 +218,8 @@ int parseCommand(CommandType type, char* line)
 
         case BENCHMARK:
             return 0;
-        case INFO:
 
+        case INFO:
             if(argc >= 2)
                 return -1;
 
@@ -238,10 +238,12 @@ int parseCommand(CommandType type, char* line)
             return h->handler(style);
 
         case VALIDATE:
-            return 0;
+            CommandHandler* h = &registry->handlers[type];
+            return h->handler(NULL);
 
         case CONFIG:
-            return 0;
+            CommandHandler* h = &registry->handlers[type]; // Constants and specifics
+            return h->handler(NULL);
 
         default:
             return -1;
