@@ -28,7 +28,7 @@ typedef enum CommandType
 
 typedef struct CommandHandler
 {
-    Command type;
+    CommandType type;
     const char* longName;
     const char* shortName;
     const char* description;
