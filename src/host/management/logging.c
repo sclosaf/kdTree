@@ -4,7 +4,7 @@
 
 static Logger logger =
 {
-    .stream = stdout,
+    .stream = NULL,
     .level = ERROR
 };
 
@@ -53,7 +53,7 @@ void logDebug(const char* msg)
 
 void setStream(FILE* stream)
 {
-    logger.stream == NULL ? stdout : stream;
+    logger.stream = stream ? stream : stdout;
 }
 
 void setVerbosity(Severity severity)
