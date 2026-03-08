@@ -5,7 +5,7 @@
 #include <ctype.h>
 #include <stdint.h>
 
-#include "management/commands.h"
+#include "management/interface.h"
 #include "management/logging.h"
 #include "environment/init.h"
 
