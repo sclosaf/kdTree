@@ -49,7 +49,7 @@ void freeCommandRegistry();
 void printHelp();
 void printAvailableCommands();
 
-int executeCommand(CommandType* cmd);
+int executeCommand(CommandType cmd);
 
 int handleBuild();
 int handleQuery();
