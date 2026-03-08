@@ -1,7 +1,7 @@
-#include "management/metrics.h"
+#include "management/interface.h"
 
 int main()
 {
-    printSystemMetrics();
+    run();
     return 0;
 }
