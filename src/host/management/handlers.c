@@ -1,3 +1,5 @@
+#include "kdTree/print.h"
+
 #include "environment/init.h"
 
 #include "management/metrics.h"
