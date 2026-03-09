@@ -5,7 +5,10 @@
 #include <stdint.h>
 
 #include "kdTree/types.h"
+
 #include "environment/init.h"
+
+#include "management/dpuManagement.h"
 
 typedef struct ReplicaInfo
 {
