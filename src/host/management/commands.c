@@ -236,7 +236,11 @@ int processCommand(CommandType type, char* line)
 
         case INFO:
             if(argc < 2 || argv[1] == NULL)
+            {
+                printf("argc %d\n", argc);
+                printf("argv[1] = %s\n", argv[1]);
                 return -1;
+            }
 
             Style* style = (Style*)malloc(sizeof(Style));
 
