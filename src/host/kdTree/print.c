@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <dpu.h>
+#include <dpu_types.h>
 
 #include "kdTree/print.h"
 #include "kdTree/utils.h"
