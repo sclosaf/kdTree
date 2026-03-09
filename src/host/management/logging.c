@@ -1,6 +1,7 @@
 #include <time.h>
 
 #include "management/logging.h"
+#include "environment/constants.h"
 
 static Logger logger =
 {

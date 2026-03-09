@@ -5,10 +5,8 @@
 #include <stdbool.h>
 
 #include "kdTree/types.h"
-#include "management/dpuManagement.h"
 
-#define BOLD "\033[1m"
-#define RESET "\033[0m"
+#include "management/dpuManagement.h"
 
 typedef enum Style
 {

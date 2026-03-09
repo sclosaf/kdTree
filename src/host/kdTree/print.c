@@ -7,6 +7,8 @@
 #include "kdTree/utils.h"
 #include "kdTree/build.h"
 
+#include "environment/constants.h"
+
 #include "management/dpuManagement.h"
 
 static void printSeparator()

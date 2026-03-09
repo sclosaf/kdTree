@@ -37,4 +37,24 @@
 #define DEFAULT_CHUNK_SIZE 64
 #endif
 
+#ifndef RED
+#define RED     "\x1b[31m"
+#endif
+
+#ifndef YELLOW
+#define YELLOW  "\x1b[33m"
+#endif
+
+#ifndef BLUE
+#define BLUE    "\x1b[34m"
+#endif
+
+#ifndef BOLD
+#define BOLD "\033[1m"
+#endif
+
+#ifndef RESET
+#define RESET   "\x1b[0m"
+#endif
+
 #endif
