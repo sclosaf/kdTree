@@ -345,7 +345,6 @@ DpuAllocation* createDpuAllocation()
 
     alloc->nextOffset = calloc(getConfig()->nPim, sizeof(uint32_t));
     alloc->allocationCount = calloc(getConfig()->nPim, sizeof(uint32_t));
-    alloc->numDpus = getConfig()->nPim;
 
     if(!alloc->nextOffset || !alloc->allocationCount)
     {
