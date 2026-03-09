@@ -24,7 +24,7 @@ KDNode* createLeafNode(point** points, size_t size);
 void copyNode(KDNode* dest, KDNode* src);
 void assignNodesToGroups(KDNode* node, KDGroup** groups, uint8_t numGroups);
 
-void traverseSketchAndAssign(KDNode* sketch, point** points, size_t n, size_t P, point*** perPimPoints, size_t* perPimCounts);
+void traverseSketchAndAssign(KDNode* sketch, point** points, size_t n, point*** perPimPoints, size_t* perPimCounts);
 
 bool incrementApproximateCounter(KDNode* node, size_t totalTreeSize);
 bool decrementApproximateCounter(KDNode* node, size_t totalTreeSize);

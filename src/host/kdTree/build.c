@@ -9,8 +9,6 @@
 #include "kdTree/build.h"
 #include "kdTree/utils.h"
 
-#include "management/dpuManagement.h"
-
 KDTree* onChipBuild(point** points, size_t size)
 {
     if(!points || size == 0)
@@ -120,30 +118,38 @@ KDTree* replicate(KDTree* original, KDGroup** groups)
     return newTree;
 }
 
-KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
+KDTree* buildPIMKDTree(point** points, size_t n)
 {
-    if(!points || n == 0 || !dpuCtx)
+    if(!points || n == 0)
         return NULL;
 
-    size_t P = dpuCtx->nDpus;
+    dpu_set_t set;
+    uint32_t nPim = getConfig()->nPim;
+    DPU_ASSERT(dpu_alloc(nPim, NULL, &set));
 
-    DpuAllocation* alloc = createDpuAllocation(P);
+    DpuAllocation* alloc = createDpuAllocation(nPim);
     if(!alloc)
+    {
+        dpu_free(set);
         return NULL;
+    }
 
     size_t rate = getConfig()->oversamplingRate;
-    size_t sampleCount = P * rate;
+    size_t sampleCount = nPim * rate;
 
     point** samples = malloc(sampleCount * sizeof(point*));
     if(!samples)
+    {
+        freeDpuAllocation(alloc);
+        dpu_free(set);
         return NULL;
+    }
 
     #pragma omp parallel for
     for(size_t i = 0; i < sampleCount; ++i)
         samples[i] = points[rand() % n];
 
-
-    uint16_t sketchLevels = (uint16_t)ceil(log2(P));
+    uint16_t sketchLevels = (uint16_t)ceil(log2(nPim));
 
     KDNode* cacheForest = NULL;
     buildSketch(&cacheForest, samples, sampleCount, sketchLevels);
@@ -151,22 +157,36 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
     free(samples);
 
     if(!cacheForest)
+    {
+        freeDpuAllocation(alloc);
+        dpu_free(set);
         return NULL;
+    }
 
-    point*** perPimPoints = malloc(P * sizeof(point**));
-    size_t* perPimCounts = calloc(P, sizeof(size_t));
+    point*** perPimPoints = malloc(nPim * sizeof(point**));
+    size_t* perPimCounts = calloc(nPim, sizeof(size_t));
 
     if(!perPimPoints || !perPimCounts)
     {
         free(perPimPoints);
         free(perPimCounts);
-
+        freeKDTree(cacheForest);
+        freeDpuAllocation(alloc);
+        dpu_free(set);
         return NULL;
     }
 
-    traverseSketchAndAssign(cacheForest, points, n, P, NULL, perPimCounts);
+    #pragma omp parallel for
+    for(size_t i = 0; i < n; ++i)
+    {
+        size_t leafIndex = getBucket(cacheForest, points[i]);
+        size_t pimId = leafIndex % nPim;
 
-    for(size_t i = 0; i < P; ++i)
+        #pragma omp atomic
+        ++perPimCounts[pimId];
+    }
+
+    for(size_t i = 0; i < nPim; ++i)
     {
         perPimPoints[i] = malloc(perPimCounts[i] * sizeof(point*));
 
@@ -177,40 +197,17 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
 
             free(perPimPoints);
             free(perPimCounts);
-
+            freeKDTree(cacheForest);
+            freeDpuAllocation(alloc);
+            dpu_free(set);
             return NULL;
         }
     }
 
-    size_t* counters = calloc(P, sizeof(size_t));
-    if(!counters)
-    {
-        for(size_t i = 0; i < P; i++)
-            if(perPimPoints[i])
-                free(perPimPoints[i]);
+    memset(perPimCounts, 0, nPim * sizeof(size_t));
+    traverseSketchAndAssign(cacheForest, points, n, perPimPoints, perPimCounts);
 
-        free(perPimPoints);
-        free(perPimCounts);
-
-        return NULL;
-    }
-
-    for(size_t i = 0; i < n; ++i)
-    {
-        size_t leafIndex = getBucket(cacheForest, points[i]);
-        size_t pimId = leafIndex % P;
-
-        perPimPoints[pimId][counters[pimId]++] = points[i];
-    }
-
-    free(counters);
-
-    DPUKernelArgs args = {
-        .totalPoints = 0,
-        .pointsPerDpu = 0
-    };
-
-    for(size_t i = 0; i < P; ++i)
+    for(size_t i = 0; i < nPim; ++i)
     {
         if(perPimCounts[i] == 0)
             continue;
@@ -219,84 +216,128 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
 
         if(!pointData)
         {
-            for(size_t j = 0; j < i; ++j)
+            for(size_t j = 0; j < nPim; ++j)
                 if(perPimPoints[j] && perPimCounts[j] > 0)
                     free(perPimPoints[j]);
 
             free(perPimPoints);
             free(perPimCounts);
-            free(counters);
-
+            freeKDTree(cacheForest);
+            freeDpuAllocation(alloc);
+            dpu_free(set);
             return NULL;
         }
 
         for(size_t j = 0; j < perPimCounts[i]; ++j)
-            memcpy(&pointData[j * getConfig()->dimensions], perPimPoints[i][j]->coords, getConfig()->dimensions* sizeof(float));
+            memcpy(&pointData[j * getConfig()->dimensions], perPimPoints[i][j]->coords, getConfig()->dimensions * sizeof(float));
 
-        int ret = dpuTransferDataToDpu(dpuCtx, i, pointData, perPimCounts[i] * getConfig()->dimensions * sizeof(float), DPU_XFER_DEFAULT);
-        free(pointData);
-        if(ret != 0)
+        struct dpu_set_t dpu;
+        uint32_t currentId = 0;
+        bool found = false;
+
+        DPU_FOREACH(set, dpu)
         {
-            for(size_t j = 0; j < P; ++j)
+            if(currentId == i)
+            {
+                found = true;
+                DPU_ASSERT(dpu_prepare_xfer(dpu, pointData));
+                DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_TO_DPU, "input", 0, perPimCounts[i] * getConfig()->dimensions * sizeof(float), DPU_XFER_DEFAULT));
+                break;
+            }
+            ++currentId;
+        }
+
+        free(pointData);
+
+        if(!found)
+        {
+            for(size_t j = 0; j < nPim; ++j)
                 if(perPimPoints[j] && perPimCounts[j] > 0)
                     free(perPimPoints[j]);
 
             free(perPimPoints);
             free(perPimCounts);
-            free(counters);
-
+            freeKDTree(cacheForest);
+            freeDpuAllocation(alloc);
+            dpu_free(set);
             return NULL;
         }
 
-        args.totalPoints = perPimCounts[i];
-
-        ret = dpuLaunchSpecificDpu(dpuCtx, i, "tasklet", &args); // TO DO - tasklet
-        if(ret != 0)
+        currentId = 0;
+        found = false;
+        DPU_FOREACH(dpu_set, dpu)
         {
-            for(size_t j = 0; j < P; j++)
+            if(currentId == i)
+            {
+                found = true;
+
+                uint32_t totalPoints = perPimCounts[i];
+
+                DPU_ASSERT(dpu_load(dpu, "tasklet", NULL));
+                DPU_ASSERT(dpu_prepare_xfer(dpu, &totalPoints));
+                DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_TO_DPU, "totalPoints", 0,  sizeof(uint32_t), DPU_XFER_DEFAULT));
+                DPU_ASSERT(dpu_launch(dpu, DPU_SYNCHRONOUS));
+                break;
+            }
+
+            ++currentId;
+        }
+
+        if(!found)
+        {
+            for(size_t j = 0; j < nPim; ++j)
                 if(perPimPoints[j])
                     free(perPimPoints[j]);
 
             free(perPimPoints);
             free(perPimCounts);
-            free(counters);
-
+            freeKDTree(cacheForest);
+            freeDpuAllocation(alloc);
+            dpu_free(set);
             return NULL;
         }
     }
 
-    sendSketchToAllDpus(dpuCtx, cacheForest);
+    size_t sketchSize;
+    void* sketchData = serializeTree(cacheForest, &sketchSize);
+    if(sketchData)
+    {
+        DPU_ASSERT(dpu_broadcast_to(set, "sketch", 0, sketchData, sketchSize, DPU_XFER_DEFAULT | DPU_XFER_FROM_DPU));
+        free(sketchData);
+    }
 
     size_t totalNodes;
-    KDNode** subtrees = collectSubtreesFromDpus(dpuCtx, P, &totalNodes);
+    KDNode** subtrees = collectSubtreesFromDpus(&totalNodes);
 
     if(!subtrees)
     {
-        for(size_t i = 0; i < P; ++i)
+        for(size_t i = 0; i < nPim; ++i)
             if(perPimPoints[i])
                 free(perPimPoints[i]);
 
         free(perPimPoints);
         free(perPimCounts);
-        free(counters);
+        freeKDTree(cacheForest);
+        freeDpuAllocation(alloc);
+        dpu_free(set);
         return NULL;
     }
 
-    for(size_t i = 0; i < P; ++i)
+    for(size_t i = 0; i < nPim; ++i)
         if(subtrees[i])
             initializeSubtreeCounters(subtrees[i], n);
 
-    scatterReplica(dpuCtx, subtrees, P, n, cacheForest, alloc);
+    scatterReplica(subtrees, n, cacheForest, alloc);
 
     freeDpuAllocation(alloc);
 
-    for(size_t i = 0; i < P; ++i)
+    for(size_t i = 0; i < nPim; ++i)
         if(subtrees[i])
             freeKDTree(subtrees[i]);
 
     free(subtrees);
 
-    for(size_t i = 0; i < P; ++i)
+    for(size_t i = 0; i < nPim; ++i)
         free(perPimPoints[i]);
 
     free(perPimPoints);
@@ -310,6 +351,7 @@ KDTree* buildPIMKDTree(point** points, size_t n, DPUContext* dpuCtx)
         result->totalNodes = 0;
     }
 
+    dpu_free(set);
     return result;
 }
 
@@ -339,7 +381,7 @@ KDNode* buildReplicatedTree(KDGroup** groups, uint8_t groupLevel)
 {
     uint8_t currentLevel = groupLevel;
     while(groups[currentLevel] != NULL && groups[currentLevel]->count == 0)
-        currentLevel++;
+        ++currentLevel;
 
     if(groups[currentLevel] == NULL)
         return NULL;
@@ -746,75 +788,62 @@ void attachSubtree(KDNode* sketch, uint16_t bucketId, KDNode* subtree)
         subtree->parent = current;
 }
 
-void traverseSketchAndAssign(KDNode* sketch, point** points, size_t n, size_t P, point*** perPimPoints, size_t* perPimCounts)
+void traverseSketchAndAssign(KDNode* sketch, point** points, size_t n, point*** perPimPoints, size_t* perPimCounts)
 {
-    if(!sketch || !points || n == 0 || P == 0 || !perPimCounts)
+    if(!sketch || !points || n == 0 || !perPimCounts || !perPimPoints)
         return;
 
-    if(perPimPoints == NULL)
+    uint8_t nPim = getConfig()->nPim;
+
+    int maxThreads = omp_get_max_threads();
+    size_t** localCounters = malloc(maxThreads * sizeof(size_t*));
+
+    #pragma omp parallel
     {
-        #pragma omp parallel for
+        #pragma omp single
+        {
+            for(int i = 0; i < maxThreads; ++i)
+                localCounters[i] = calloc(nPim, sizeof(size_t));
+        }
+    }
+
+    #pragma omp parallel
+    {
+        int threadId = omp_get_thread_num();
+
+        #pragma omp for
         for(size_t i = 0; i < n; ++i)
         {
             size_t leafIndex = getBucket(sketch, points[i]);
-            size_t pimId = leafIndex % P;
+            size_t pimId = leafIndex % nPim;
 
-            #pragma omp atomic
-            ++perPimCounts[pimId];
+            size_t pos = localCounters[threadId][pimId];
+
+            perPimPoints[pimId][pos] = points[i];
+            ++localCounters[threadId][pimId];
         }
     }
-    else
+
+    #pragma omp parallel
     {
-        int maxThreads = omp_get_max_threads();
-        size_t** localCounters = malloc(maxThreads * sizeof(size_t*));
+        int threadId = omp_get_thread_num();
+        size_t pimStart = (nPim * threadId) / maxThreads;
+        size_t pimEnd = (nPim * (threadId + 1)) / maxThreads;
 
-        #pragma omp parallel
+        for(size_t p = pimStart; p < pimEnd; ++p)
         {
-            #pragma omp single
-            {
-                for(int i = 0; i < maxThreads; ++i)
-                    localCounters[i] = calloc(P, sizeof(size_t));
-            }
+            size_t total = 0;
+
+            for(int t = 0; t < maxThreads; ++t)
+                total += localCounters[t][p];
+
+            perPimCounts[p] = total;
         }
-
-        #pragma omp parallel
-        {
-            int threadId = omp_get_thread_num();
-
-            #pragma omp for
-            for(size_t i = 0; i < n; ++i)
-            {
-                size_t leafIndex = getBucket(sketch, points[i]);
-                size_t pimId = leafIndex % P;
-
-                size_t pos = localCounters[threadId][pimId];
-
-                perPimPoints[pimId][pos] = points[i];
-                ++localCounters[threadId][pimId];
-            }
-        }
-
-        #pragma omp parallel
-        {
-            int threadId = omp_get_thread_num();
-            size_t pimStart = (P * threadId) / maxThreads;
-            size_t pimEnd = (P * (threadId + 1)) / maxThreads;
-
-            for(size_t p = pimStart; p < pimEnd; ++p)
-            {
-                size_t total = 0;
-
-                for(int t = 0; t < maxThreads; ++t)
-                    total += localCounters[t][p];
-
-                perPimCounts[p] = total;
-            }
-        }
-
-        for(int t = 0; t < maxThreads; ++t)
-            free(localCounters[t]);
-
-        free(localCounters);
     }
+
+    for(int t = 0; t < maxThreads; ++t)
+        free(localCounters[t]);
+
+    free(localCounters);
 }
 
