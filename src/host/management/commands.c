@@ -166,7 +166,7 @@ void printAvailableCommands()
     }
 }
 
-int parseCommand(CommandType type, char* line)
+int processCommand(CommandType type, char* line)
 {
     if(!line || strlen(line) == 0)
     {
