@@ -8,8 +8,6 @@
 
 #include "kdTree/build.h"
 #include "kdTree/utils.h"
-#include "kdTree/free.h"
-#include "kdTree/counters.h"
 
 #include "management/dpuManagement.h"
 
