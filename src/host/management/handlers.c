@@ -1,3 +1,6 @@
+#include "environment/init.h"
+
+#include "management/specifics.h"
 #include "management/interface.h"
 
 int handleBuild(void* context)
@@ -57,5 +60,28 @@ int handleValidate(void* context)
 
 int handleConfig(void* context)
 {
-    return 0;
+    ConfigContext ctx = *(ConfigContext*)context;
+    free(context);
+
+    switch(ctx)
+    {
+        case INIT:
+            initConfig();
+            return 0;
+
+        case RESET:
+            resetConfig();
+            return 0;
+
+        case PRINT:
+            printConfig();
+            return 0;
+
+        case SPECIFICS:
+            printSystemMetrics();
+            return 0;
+
+        default:
+            return -1;
+    }
 }

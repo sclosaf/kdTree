@@ -104,7 +104,7 @@ void initCommandRegistry()
         {BENCHMARK, "bench", "be", "Run benchmarks", NULL, handleBenchmark},
         {INFO, "info", "inf", "Display tree information", "[-c|-d|-t]", handleInfo},
         {VALIDATE, "validate", "v", "Validate tree structure", NULL, handleValidate},
-        {CONFIG, "config", "c", "Configure system parameters", NULL, handleConfig},
+        {CONFIG, "config", "c", "Configure system parameters", "[-i|-r|-p|-s]", handleConfig},
     };
 
     uint8_t numHandlers = sizeof(defaultHandlers) / sizeof(defaultHandlers[0]);
@@ -184,10 +184,7 @@ int processCommand(CommandType type, char* line)
 
     char* cmdStr = strtok(line, " \t");
     if(!cmdStr)
-    {
-        free(line);
         return -1;
-    }
 
     char* argv[64] = {NULL};
     int argc = 0;
@@ -256,8 +253,24 @@ int processCommand(CommandType type, char* line)
             return h->handler(NULL);
 
         case CONFIG:
-            h = &registry->handlers[type]; // Implement Constants and specifics
-            return h->handler(NULL);
+            if(argc >= 2  || argv[i] == NULL)
+                return -1;
+
+            ConfigContext* ctx = (ConfigContext*)malloc(sizeof(ConfigContext));
+
+            if(strcmp(argv[i], "-i") == 0)
+                *ctx = INIT;
+            else if(strcmp(argv[i], "-r") == 0)
+                *ctx = RESET;
+            else if(strcmp(argv[i], "-p") == 0)
+                *ctx = PRINT;
+            else if(strcmp(argv[i], "-s") == 0)
+                *ctx = SPECIFICS;
+            else
+                return -1;
+
+            h = &registry->handlers[type];
+            return h->handler(ctx);
 
         default:
             return -1;
