@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <math.h>
 #include <omp.h>
+#include <dpu.h>
+#include <dpu_types.h>
 
 #include "environment/init.h"
 
@@ -123,7 +125,7 @@ KDTree* buildPIMKDTree(point** points, size_t n)
     if(!points || n == 0)
         return NULL;
 
-    dpu_set_t set;
+    struct dpu_set_t set;
     uint32_t nPim = getConfig()->nPim;
     DPU_ASSERT(dpu_alloc(nPim, NULL, &set));
 
