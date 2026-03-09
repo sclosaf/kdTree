@@ -137,8 +137,8 @@ void printHelp()
 
     printAvailableCommands();
 
-    printf("  help / h - Show this help\n");
-    printf("  quit / q - Exit the program\n");
+    printf("  help / h \t\t\t\t Show this help\n");
+    printf("  quit / q \t\t\t\t Exit the program\n");
 }
 
 void printAvailableCommands()
@@ -150,7 +150,7 @@ void printAvailableCommands()
     {
         CommandHandler* h = &registry->handlers[i];
 
-        printf("  %s", h->longName);
+        printf("- %s", h->longName);
 
         if(h->shortName)
             printf(" / %s", h->shortName);
@@ -158,7 +158,7 @@ void printAvailableCommands()
         if(h->subFlag)
             printf(" %s", h->subFlag);
 
-        int len = strlen(h->longName) + 4;
+        int len = strlen(h->longName) + 2;
         if(h->shortName)
             len += strlen(h->shortName) + 3;
         if(h->subFlag)
