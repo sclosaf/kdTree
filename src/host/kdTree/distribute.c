@@ -14,7 +14,7 @@ void sendSketchToAllDpus(KDNode* sketch)
     if(!sketchData)
         return;
 
-    dpu_set_t set;
+    struct dpu_set_t set;
     uint32_t nPim = getConfig()->nPim;
 
     DPU_ASSERT(dpu_alloc(nPim, NULL, &set));
@@ -26,7 +26,7 @@ void sendSketchToAllDpus(KDNode* sketch)
 
 KDNode** collectSubtreesFromDpus(size_t* totalNodes)
 {
-    dpu_set_t set;
+    struct dpu_set_t set;
     uint32_t nPim = getConfig()->nPim;
 
     DPU_ASSERT(dpu_alloc(nPim, NULL, &set));
@@ -133,7 +133,7 @@ void scatterReplica(KDNode** subtrees, KDNode* cacheForest, DpuAllocation* alloc
     if(!subtrees || !alloc)
         return;
 
-    dpu_set_t set;
+    struct dpu_set_t set;
     uint32_t nPim = getConfig()->nPim;
     DPU_ASSERT(dpu_alloc(nPim, NULL, &set));
 
