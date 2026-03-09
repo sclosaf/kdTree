@@ -52,7 +52,6 @@ void printAvailableCommands();
 int processCommand(CommandType type, char* line);
 
 int handleBuild(void* context);
-int handleQuery(void* context);
 int handleInsert(void* context);
 int handleDelete(void* context);
 int handleKNN(void* context);
