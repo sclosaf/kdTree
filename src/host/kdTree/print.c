@@ -9,8 +9,6 @@
 
 #include "environment/constants.h"
 
-#include "management/dpuManagement.h"
-
 static void printSeparator()
 {
     printf("\n");
