@@ -141,8 +141,6 @@ void printHelp()
     printf("  quit / q - Exit the program\n");
 }
 
-
-
 void printAvailableCommands()
 {
     if(!registry || !registry->handlers)
@@ -152,17 +150,28 @@ void printAvailableCommands()
     {
         CommandHandler* h = &registry->handlers[i];
 
-        printf("  %-12s", h->longName);
+        printf("  %s", h->longName);
 
         if(h->shortName)
             printf(" / %s", h->shortName);
-        else
-            printf("             ");
-
-        printf(" - %s\n", h->description);
 
         if(h->subFlag)
-            printf("      %s\n", h->subFlag);
+            printf(" %s", h->subFlag);
+
+        int len = strlen(h->longName) + 4;
+        if(h->shortName)
+            len += strlen(h->shortName) + 3;
+        if(h->subFlag)
+            len += strlen(h->subFlag) + 1;
+
+        int tabs = (40 - len + 7) / 8;
+        if(tabs < 1)
+            tabs = 1;
+
+        for(int t = 0; t < tabs; t++)
+            printf("\t");
+
+        printf("%s\n", h->description);
     }
 }
 
