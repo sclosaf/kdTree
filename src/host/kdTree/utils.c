@@ -4,7 +4,6 @@
 #include <math.h>
 
 #include "kdTree/utils.h"
-#include "kdTree/free.h"
 
 #include "environment/init.h"
 
