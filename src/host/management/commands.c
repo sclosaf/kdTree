@@ -137,8 +137,8 @@ void printHelp()
 
     printAvailableCommands();
 
-    printf("  help / h \t\t\t\t Show this help\n");
-    printf("  quit / q \t\t\t\t Exit the program\n");
+    printf("- help / h \t\t\t\tShow this help\n");
+    printf("- quit / q \t\t\t\tExit the program\n");
 }
 
 void printAvailableCommands()
