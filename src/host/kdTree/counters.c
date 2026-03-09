@@ -5,7 +5,7 @@
 
 #include "kdTree/types.h"
 #include "kdTree/utils.h"
-#include "kdTree/counters.h"
+#include "kdTree/build.h"
 
 #include "environment/init.h"
 
