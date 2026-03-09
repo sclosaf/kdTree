@@ -3,7 +3,8 @@
 
 #include "environment/init.h"
 
-#include "kdTree/deserialize.h"
+#include "kdTree/utils.h"
+
 
 KDNode* deserializeTree(void* data, size_t size)
 {

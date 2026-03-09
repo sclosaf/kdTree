@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "kdTree/serialize.h"
+#include "kdTree/utils.h"
 
 #include "environment/init.h"
 
