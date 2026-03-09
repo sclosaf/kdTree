@@ -25,6 +25,14 @@ typedef enum CommandType
     UNKNOWN
 } CommandType;
 
+typedef enum ConfigContext
+{
+    INIT,
+    RESET,
+    PRINT,
+    SPECIFICS
+} ConfigContext;
+
 typedef struct CommandHandler
 {
     CommandType type;
