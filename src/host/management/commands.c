@@ -5,8 +5,11 @@
 #include <ctype.h>
 #include <stdint.h>
 
+#include "kdTree/print.h"
+
 #include "management/interface.h"
 #include "management/logging.h"
+
 #include "environment/init.h"
 
 static CommandRegistry* registry = NULL;
