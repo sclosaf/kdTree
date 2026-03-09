@@ -1,3 +1,5 @@
+#include <dpu.h>
+#include <dpu_types.h>
 #include <math.h>
 
 #include "kdTree/utils.h"
