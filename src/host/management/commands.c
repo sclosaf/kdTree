@@ -19,17 +19,21 @@ static CommandType getCommandType(char* cmd)
     if(!cmd)
         return UNKNOWN;
 
-    for(size_t i = 0; i < strlen(cmd); ++i)
-        cmd[i] = tolower(cmd[i]);
+    char* token = strtok(cmd, " \t");
+    if(!token)
+        return UNKNOWN;
+
+    for(size_t i = 0; i < strlen(token); ++i)
+        token[i] = tolower(token[i]);
 
     for(size_t i = 0; i < registry->count; ++i)
     {
         CommandHandler* handler = &registry->handlers[i];
 
-        if(handler->longName && strcmp(cmd, handler->longName) == 0)
+        if(handler->longName && strcmp(token, handler->longName) == 0)
             return handler->type;
 
-        if(handler->shortName && strcmp(cmd, handler->shortName) == 0)
+        if(handler->shortName && strcmp(token, handler->shortName) == 0)
             return handler->type;
     }
 
@@ -273,7 +277,6 @@ int processCommand(CommandType type, char* line)
             return h->handler(ctx);
 
         default:
-            printf("default");
             return -1;
     }
 }
