@@ -5,7 +5,6 @@
 #include <stdbool.h>
 
 #include "kdTree/types.h"
-#include "management/dpuManagement.h"
 
 typedef enum CommandType
 {
