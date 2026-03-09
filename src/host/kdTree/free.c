@@ -1,7 +1,6 @@
 #include <stdlib.h>
 
-#include "kdTree/distribute.h"
-#include "kdTree/free.h"
+#include "kdTree/utils.h"
 
 void freeKDTree(KDNode* node)
 {

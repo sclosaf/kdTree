@@ -26,4 +26,13 @@ void assignNodesToGroups(KDNode* node, KDGroup** groups, uint8_t numGroups);
 
 void traverseSketchAndAssign(KDNode* sketch, point** points, size_t n, size_t P, point*** perPimPoints, size_t* perPimCounts);
 
+bool incrementApproximateCounter(KDNode* node, size_t totalTreeSize);
+bool decrementApproximateCounter(KDNode* node, size_t totalTreeSize);
+bool isBalanced(KDNode* node);
+void propagateCounterUpdate(KDNode* node, int delta, size_t totalTreeSize, bool lowest);
+
+void initializeSubtreeCounters(KDNode* node, size_t totalTreeSize);
+void updatePathCounters(KDNode* leaf, size_t totalTreeSize, int delta);
+bool verifyCounterConsistency(KDNode* node);
+
 #endif
