@@ -338,49 +338,68 @@ void printKDTree(KDNode* root, Style style)
     printBoldSeparator();
 }
 
-void printKDTreeOnDpu(DPUContext* dpuCtx, uint32_t dpuId, Style style)
+void printKDTreeOnDpu(uint32_t dpuId, Style style)
 {
-    if(!dpuCtx || dpuId >= dpuCtx->nDpus)
+    dpu_set_t set;
+    uint32_t nPim = getConfig()->nPim;
+
+    if(dpuId >= nPim)
+        return;
+
+    DPU_ASSERT(dpu_alloc(nPim, NULL, &set));
+
+    struct dpu_set_t dpu;
+    uint32_t currentId = 0;
+    bool found = false;
+
+    DPU_FOREACH(set, dpu)
     {
-        printf("Invalid DPU ID: %u\n", dpuId);
+        if(currentId == dpuId)
+        {
+            found = true;
+            break;
+        }
+        currentId++;
+    }
+
+    if(!found)
+    {
+        dpu_free(set);
         return;
     }
 
-    printf("\n%s[Loading tree from DPU %u...]%s\n", ANSI_BOLD, dpuId, ANSI_RESET);
-
     size_t treeSize = 0;
-    int ret = dpuTransferDataFromDpu(dpuCtx, dpuId, &treeSize, sizeof(size_t), DPU_XFER_DEFAULT);
 
-    if(ret != 0 || treeSize == 0)
+    DPU_ASSERT(dpu_prepare_xfer(dpu, &treeSize));
+    DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "output", 0, sizeof(size_t), DPU_XFER_DEFAULT));
+
+    if(treeSize == 0)
     {
-        printf("DPU %u: tree is empty or not accessible\n", dpuId);
+        dpu_free(set);
         return;
     }
 
     void* treeData = malloc(treeSize);
     if(!treeData)
     {
-        printf("Memory allocation failed\n");
+        dpu_free(set);
         return;
     }
 
-    ret = dpuTransferDataFromDpu(dpuCtx, dpuId, treeData, treeSize, DPU_XFER_DEFAULT);
+    DPU_ASSERT(dpu_prepare_xfer(dpu, treeData));
+    DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "output", 0, treeSize, DPU_XFER_DEFAULT));
 
-    if(ret == 0)
+    KDNode* root = deserializeTree(treeData, treeSize);
+    if(root)
     {
-        KDNode* root = deserializeTree(treeData, treeSize);
-        if(root)
-        {
-            printKDTree(root, style);
-            freeKDTree(root);
-        }
-        else
-            printf("Failed to deserialize tree from DPU %u\n", dpuId);
+        printKDTree(root, style);
+        freeKDTree(root);
     }
     else
-        printf("Failed to read tree data from DPU %u\n", dpuId);
+        printf("Failed to deserialize tree from DPU %u\n", dpuId);
 
     free(treeData);
+    dpu_free(set);
 }
 
 void printKDTreeStats(KDNode* root)
@@ -514,69 +533,76 @@ void checkApproximateCounters(KDNode* root)
         printf("  └─ %sFound %zu inconsistent counters%s\n", ANSI_BOLD, stats.inconsistent, ANSI_RESET);
 }
 
-void printMemoryLayout(DPUContext* dpuCtx)
+void printMemoryLayout()
 {
-    if(!dpuCtx)
-        return;
+    dpu_set_t dpu_set;
+    uint32_t nPim = getConfig()->nPim;
+    DPU_ASSERT(dpu_alloc(nPim, NULL, &dpu_set));
 
-    size_t P = dpuCtx->nDpus;
-    size_t* nodesPerDpu = calloc(P, sizeof(size_t));
-    size_t* replicasPerDpu = calloc(P, sizeof(size_t));
-    size_t* memoryPerDpu = calloc(P, sizeof(size_t));
+    size_t* nodesPerDpu = calloc(nPim, sizeof(size_t));
+    size_t* replicasPerDpu = calloc(nPim, sizeof(size_t));
+    size_t* memoryPerDpu = calloc(nPim, sizeof(size_t));
 
     if(!nodesPerDpu || !replicasPerDpu || !memoryPerDpu)
     {
         free(nodesPerDpu);
         free(replicasPerDpu);
         free(memoryPerDpu);
+        dpu_free(dpu_set);
         return;
     }
 
-    for(size_t i = 0; i < P; ++i)
+    uint32_t currentId = 0;
+    struct dpu_set_t dpu;
+
+    DPU_FOREACH(dpu_set, dpu)
     {
         size_t replicaCount = 0;
-        int ret = dpuTransferDataFromDpu(dpuCtx, (uint32_t)i, &replicaCount, sizeof(size_t), DPU_XFER_DEFAULT);
 
-        if(ret == 0)
+        DPU_ASSERT(dpu_prepare_xfer(dpu, &replicaCount));
+        DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "output", 0, sizeof(size_t),
+                                 DPU_XFER_DEFAULT));
+
+        replicasPerDpu[currentId] = replicaCount;
+
+        if(replicaCount > 0)
         {
-            replicasPerDpu[i] = replicaCount;
-
-            if(replicaCount > 0)
+            ReplicaInfo* infos = malloc(replicaCount * sizeof(ReplicaInfo));
+            if(infos)
             {
-                ReplicaInfo* infos = malloc(replicaCount * sizeof(ReplicaInfo));
-                if(infos)
+                DPU_ASSERT(dpu_prepare_xfer(dpu, infos));
+                DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "output", 0,
+                                         replicaCount * sizeof(ReplicaInfo), DPU_XFER_DEFAULT));
+
+                for(size_t j = 0; j < replicaCount; ++j)
                 {
-                    ret = dpuTransferDataFromDpu(dpuCtx, (uint32_t)i, infos, replicaCount * sizeof(ReplicaInfo), DPU_XFER_DEFAULT);
-
-                    if(ret == 0)
-                        for(size_t j = 0; j < replicaCount; ++j)
-                        {
-                            nodesPerDpu[i] += infos[j].nodeCount;
-                            memoryPerDpu[i] += sizeof(KDNode) * infos[j].nodeCount;
-                        }
-
-                    free(infos);
+                    nodesPerDpu[currentId] += infos[j].nodeCount;
+                    memoryPerDpu[currentId] += sizeof(KDNode) * infos[j].nodeCount;
                 }
+
+                free(infos);
             }
         }
+
+        currentId++;
     }
 
     printBoldSeparator();
-    printf("%sMEMORY LAYOUT (%zu DPUs)%s\n", ANSI_BOLD, P, ANSI_RESET);
+    printf("%sMEMORY LAYOUT (%u DPUs)%s\n", ANSI_BOLD, nPim, ANSI_RESET);
     printSeparator();
 
     size_t totalNodes = 0, totalReplicas = 0, totalMemory = 0;
 
-    for(size_t i = 0; i < P; ++i)
+    for(uint32_t i = 0; i < nPim; ++i)
     {
-        printf("%sDPU %2zu:%s\n", ANSI_BOLD, i, ANSI_RESET);
+        printf("%sDPU %2u:%s\n", ANSI_BOLD, i, ANSI_RESET);
         printf("  ├─ Nodes: %s%zu%s\n", ANSI_BOLD, nodesPerDpu[i], ANSI_RESET);
         printf("  ├─ Replicas: %zu\n", replicasPerDpu[i]);
         printf("  ├─ Memory: %.2f KB\n", (double)memoryPerDpu[i] / 1024.0);
 
-        if(i < P - 1 && nodesPerDpu[i] > 0)
+        if(i < nPim - 1 && nodesPerDpu[i] > 0)
         {
-            double load = (double)nodesPerDpu[i] * P / (totalNodes > 0 ? totalNodes : 1);
+            double load = (double)nodesPerDpu[i] * nPim / (totalNodes > 0 ? totalNodes : 1);
             printf("  └─ Load factor: %.2f\n", load);
         }
 
@@ -591,10 +617,11 @@ void printMemoryLayout(DPUContext* dpuCtx)
     printf("  ├─ Nodes: %s%zu%s\n", ANSI_BOLD, totalNodes, ANSI_RESET);
     printf("  ├─ Replicas: %zu\n", totalReplicas);
     printf("  ├─ Memory: %.2f KB\n", (double)totalMemory / 1024.0);
-    printf("  └─ Avg nodes/DPU: %s%.1f%s\n", ANSI_BOLD, P > 0 ? (double)totalNodes / P : 0.0, ANSI_RESET);
+    printf("  └─ Avg nodes/DPU: %s%.1f%s\n", ANSI_BOLD, nPim > 0 ? (double)totalNodes / nPim : 0.0, ANSI_RESET);
     printBoldSeparator();
 
     free(nodesPerDpu);
     free(replicasPerDpu);
     free(memoryPerDpu);
+    dpu_free(dpu_set);
 }

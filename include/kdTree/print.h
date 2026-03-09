@@ -6,8 +6,6 @@
 
 #include "kdTree/types.h"
 
-#include "management/dpuManagement.h"
-
 typedef enum Style
 {
     COMPACT,
@@ -45,7 +43,7 @@ typedef struct Issues
 } Issues;
 
 void printKDTree(KDNode* root, Style style);
-void printKDTreeOnDpu(DPUContext* dpuCtx, uint32_t dpuId, Style style);
+void printKDTreeOnDpu(uint32_t dpuId, Style style);
 void printKDTreeStats(KDNode* root);
 void printGroupInfo(KDGroup** groups, uint8_t numGroups);
 
@@ -55,6 +53,6 @@ void printNodeDetailed(KDNode* node);
 void printNodeTree(KDNode* node, int level, const char* prefix, bool isLast);
 void validateTreeStructure(KDNode* root);
 void checkApproximateCounters(KDNode* root);
-void printMemoryLayout(DPUContext* dpuCtx);
+void printMemoryLayout();
 
 #endif
