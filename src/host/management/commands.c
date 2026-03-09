@@ -46,6 +46,7 @@ void run()
         initCommandRegistry();
 
     char line[128];
+    char copy[128];
     bool running = true;
 
     printf("Type 'help' for available commands, 'quit' to exit\n");
@@ -63,6 +64,8 @@ void run()
         if(strlen(line) == 0)
             continue;
 
+        strcpy(copy, line);
+
         if(strcmp(line, "help") == 0 || strcmp(line, "h") == 0)
         {
             printHelp();
@@ -76,8 +79,8 @@ void run()
             break;
         }
 
-        CommandType type = getCommandType(line);
-        int result = processCommand(type, line);
+        CommandType type = getCommandType(copy);
+        int result = processCommand(type, copy);
 
         if(result != 0)
             printf("Command execution failed with code %d\n", result);
@@ -258,11 +261,7 @@ int processCommand(CommandType type, char* line)
 
         case CONFIG:
             if(argc < 2 || argv[1] == NULL)
-            {
-                printf("argc %d\n", argc);
-                printf("argv[1] = %s\n", argv[1]);
                 return -1;
-            }
 
             ConfigContext* ctx = (ConfigContext*)malloc(sizeof(ConfigContext));
 
