@@ -49,7 +49,7 @@ void freeCommandRegistry();
 void printHelp();
 void printAvailableCommands();
 
-int processCommand(CommandType type, char* line)
+int processCommand(CommandType type, char* line);
 
 int handleBuild(void* context);
 int handleQuery(void* context);
