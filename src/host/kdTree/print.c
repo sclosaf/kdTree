@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <dpu.h>
 
 #include "kdTree/print.h"
 #include "kdTree/utils.h"
@@ -500,8 +501,7 @@ void validateTreeStructure(KDNode* root)
     if(issues.invalidParents + issues.nullChildren + issues.cycles == 0)
         printf("%sTree structure is valid%s\n", ANSI_BOLD, ANSI_RESET);
     else
-        printf("%sTree has %zu issues%s\n", ANSI_BOLD,
-               issues.invalidParents + issues.nullChildren + issues.cycles, ANSI_RESET);
+        printf("%sTree has %zu issues%s\n", ANSI_BOLD, issues.invalidParents + issues.nullChildren + issues.cycles, ANSI_RESET);
 }
 
 void checkApproximateCounters(KDNode* root)
@@ -533,9 +533,9 @@ void checkApproximateCounters(KDNode* root)
 
 void printMemoryLayout()
 {
-    dpu_set_t dpu_set;
+    dpu_set_t set;
     uint32_t nPim = getConfig()->nPim;
-    DPU_ASSERT(dpu_alloc(nPim, NULL, &dpu_set));
+    DPU_ASSERT(dpu_alloc(nPim, NULL, &set));
 
     size_t* nodesPerDpu = calloc(nPim, sizeof(size_t));
     size_t* replicasPerDpu = calloc(nPim, sizeof(size_t));
@@ -546,20 +546,19 @@ void printMemoryLayout()
         free(nodesPerDpu);
         free(replicasPerDpu);
         free(memoryPerDpu);
-        dpu_free(dpu_set);
+        dpu_free(set);
         return;
     }
 
     uint32_t currentId = 0;
     struct dpu_set_t dpu;
 
-    DPU_FOREACH(dpu_set, dpu)
+    DPU_FOREACH(set, dpu)
     {
         size_t replicaCount = 0;
 
         DPU_ASSERT(dpu_prepare_xfer(dpu, &replicaCount));
-        DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "output", 0, sizeof(size_t),
-                                 DPU_XFER_DEFAULT));
+        DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "output", 0, sizeof(size_t), DPU_XFER_DEFAULT));
 
         replicasPerDpu[currentId] = replicaCount;
 
@@ -569,8 +568,7 @@ void printMemoryLayout()
             if(infos)
             {
                 DPU_ASSERT(dpu_prepare_xfer(dpu, infos));
-                DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "output", 0,
-                                         replicaCount * sizeof(ReplicaInfo), DPU_XFER_DEFAULT));
+                DPU_ASSERT(dpu_push_xfer(dpu, DPU_XFER_FROM_DPU, "output", 0, replicaCount * sizeof(ReplicaInfo), DPU_XFER_DEFAULT));
 
                 for(size_t j = 0; j < replicaCount; ++j)
                 {
@@ -621,5 +619,5 @@ void printMemoryLayout()
     free(nodesPerDpu);
     free(replicasPerDpu);
     free(memoryPerDpu);
-    dpu_free(dpu_set);
+    dpu_free(set);
 }
