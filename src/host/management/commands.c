@@ -271,7 +271,10 @@ int processCommand(CommandType type, char* line)
             else if(strcmp(argv[i], "-s") == 0)
                 *ctx = SPECIFICS;
             else
+            {
+                printf("ERROR\n");
                 return -1;
+            }
 
             h = &registry->handlers[type];
             return h->handler(ctx);
