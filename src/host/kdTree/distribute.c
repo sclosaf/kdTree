@@ -34,7 +34,7 @@ KDNode** collectSubtreesFromDpus(size_t* totalNodes)
     KDNode** allSubtrees = malloc(nPim * sizeof(KDNode*));
     if(!allSubtrees)
     {
-        dpu_free(dpu_set);
+        dpu_free(set);
         return NULL;
     }
 
@@ -48,7 +48,7 @@ KDNode** collectSubtreesFromDpus(size_t* totalNodes)
         uint32_t currentId = 0;
         bool found = false;
 
-        DPU_FOREACH(dpu_set, dpu)
+        DPU_FOREACH(set, dpu)
         {
             if(currentId == i)
             {
@@ -66,7 +66,7 @@ KDNode** collectSubtreesFromDpus(size_t* totalNodes)
                     free(allSubtrees[j]);
 
             free(allSubtrees);
-            dpu_free(dpu_set);
+            dpu_free(set);
 
             return NULL;
         }
@@ -84,7 +84,7 @@ KDNode** collectSubtreesFromDpus(size_t* totalNodes)
                         free(allSubtrees[j]);
 
                 free(allSubtrees);
-                dpu_free(dpu_set);
+                dpu_free(set);
 
                 return NULL;
             }
@@ -102,7 +102,7 @@ KDNode** collectSubtreesFromDpus(size_t* totalNodes)
             allSubtrees[i] = NULL;
     }
 
-    dpu_free(dpu_set);
+    dpu_free(set);
     return allSubtrees;
 }
 
