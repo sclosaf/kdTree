@@ -91,7 +91,6 @@ void initCommandRegistry()
     CommandHandler defaultHandlers[] =
     {
         {BUILD, "build", "b", "Build a new PIM-kd-tree", NULL, handleBuild},
-        {QUERY, "query", "que", "Execute point queries", NULL, handleQuery},
         {INSERT, "insert", "i", "Insert points into tree", NULL, handleInsert},
         {DELETE, "delete", "d", "Delete points from tree", NULL, handleDelete},
         {KNN, "knn", "k", "Execute k-nearest neighbor queries", NULL, handleKNN},
@@ -135,9 +134,11 @@ void printHelp()
 
     printAvailableCommands();
 
-    printf("  help      (short: h) - Show this help\n");
-    printf("  quit      (short: q) - Exit the program\n");
+    printf("  help / h - Show this help\n");
+    printf("  quit / q - Exit the program\n");
 }
+
+
 
 void printAvailableCommands()
 {
@@ -147,14 +148,18 @@ void printAvailableCommands()
     for(uint8_t i = 0; i < registry->count; ++i)
     {
         CommandHandler* h = &registry->handlers[i];
+
         printf("  %-12s", h->longName);
 
         if(h->shortName)
-            printf(" (short: %s)", h->shortName);
+            printf(" / %s", h->shortName);
         else
             printf("             ");
 
         printf(" - %s\n", h->description);
+
+        if(h->subFlag)
+            printf("      %s\n", h->subFlag);
     }
 }
 
@@ -162,7 +167,6 @@ int parseCommand(CommandType type, char* line)
 {
     if(!line || strlen(line) == 0)
     {
-        if(error) *error = strdup("Empty command");
         return -1;
     }
 
@@ -190,9 +194,6 @@ int parseCommand(CommandType type, char* line)
     switch(type)
     {
         case BUILD:
-            return 0;
-
-        case QUERY:
             return 0;
 
         case INSERT:
@@ -242,7 +243,7 @@ int parseCommand(CommandType type, char* line)
             return h->handler(NULL);
 
         case CONFIG:
-            CommandHandler* h = &registry->handlers[type]; // Constants and specifics
+            CommandHandler* h = &registry->handlers[type]; // Implement Constants and specifics
             return h->handler(NULL);
 
         default:

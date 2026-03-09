@@ -10,7 +10,6 @@
 typedef enum CommandType
 {
     BUILD,
-    QUERY,
     INSERT,
     DELETE,
     KNN,
