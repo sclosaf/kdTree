@@ -63,6 +63,7 @@ int handleConfig(void* context)
     ConfigContext ctx = *(ConfigContext*)context;
     free(context);
 
+    printf("SWITCH\n");
     switch(ctx)
     {
         case INIT:
