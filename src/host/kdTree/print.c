@@ -26,7 +26,7 @@ static void printBoldSeparator()
     printf("\n");
 
     for(int i = 0; i < 40; ++i)
-        printf("%s=%s", BOLD, RESET);
+        printf("%s=%s", ANSI_BOLD, ANSI_RESET);
 
     printf("\n");
 }
@@ -90,7 +90,7 @@ static void checkNode(KDNode* node, CounterStatistics* stats)
             {
                 ++stats->inconsistent;
 
-                printf("%sInconsistent counter at node %p:%s cnt=%u vs children (%u+%u=%u) ratio=%.2f\n", BOLD, (void*)node, RESET, node->data.internal.approximateCounter, leftSize, rightSize, sum, ratio);
+                printf("%sInconsistent counter at node %p:%s cnt=%u vs children (%u+%u=%u) ratio=%.2f\n", ANSI_BOLD, (void*)node, ANSI_RESET, node->data.internal.approximateCounter, leftSize, rightSize, sum, ratio);
             }
         }
     }
@@ -109,7 +109,7 @@ static void validateNode(KDNode* node, KDNode* parent, Issues* issues)
     if(node->parent != parent)
     {
         ++issues->invalidParents;
-        printf("%sNode %p has invalid parent%s (expected %p, got %p)\n", BOLD, (void*)node, RESET, (void*)parent, (void*)node->parent);
+        printf("%sNode %p has invalid parent%s (expected %p, got %p)\n", ANSI_BOLD, (void*)node, ANSI_RESET, (void*)parent, (void*)node->parent);
     }
 
     if(node->type == INTERNAL)
@@ -117,13 +117,13 @@ static void validateNode(KDNode* node, KDNode* parent, Issues* issues)
         if(!node->data.internal.left && !node->data.internal.right)
         {
             ++issues->nullChildren;
-            printf("%sInternal node %p has no children%s\n", BOLD, (void*)node, RESET);
+            printf("%sInternal node %p has no children%s\n", ANSI_BOLD, (void*)node, ANSI_RESET);
         }
 
         if(node->data.internal.left == node || node->data.internal.right == node)
         {
             ++issues->cycles;
-            printf("%sCycle detected in node %p%s\n", BOLD, (void*)node, RESET);
+            printf("%sCycle detected in node %p%s\n", ANSI_BOLD, (void*)node, ANSI_RESET);
         }
 
         if(node->data.internal.left)
@@ -143,9 +143,9 @@ void printNodeBrief(KDNode* node)
     }
 
     if(node->type == INTERNAL)
-        printf("I(d%d v%.2f cnt:%s%u%s)", node->data.internal.splitDim, node->data.internal.splitValue, BOLD, node->data.internal.approximateCounter, RESET);
+        printf("I(d%d v%.2f cnt:%s%u%s)", node->data.internal.splitDim, node->data.internal.splitValue, ANSI_BOLD, node->data.internal.approximateCounter, ANSI_RESET);
     else
-        printf("L(%s%zu%s pts)", BOLD, node->data.leaf.pointsCount, RESET);
+        printf("L(%s%zu%s pts)", ANSI_BOLD, node->data.leaf.pointsCount, ANSI_RESET);
 }
 
 void printNodeDetailed(KDNode* node)
@@ -156,36 +156,36 @@ void printNodeDetailed(KDNode* node)
         return;
     }
 
-    printf("%sNode Address:%s %p\n", BOLD, RESET, (void*)node);
-    printf("%sType:%s %s\n", BOLD, RESET, node->type == INTERNAL ? "INTERNAL" : "LEAF");
-    printf("%sParent:%s %p\n", BOLD, RESET, (void*)node->parent);
+    printf("%sNode Address:%s %p\n", ANSI_BOLD, ANSI_RESET, (void*)node);
+    printf("%sType:%s %s\n", ANSI_BOLD, ANSI_RESET, node->type == INTERNAL ? "INTERNAL" : "LEAF");
+    printf("%sParent:%s %p\n", ANSI_BOLD, ANSI_RESET, (void*)node->parent);
 
     if(node->type == INTERNAL)
     {
-        printf("%sSplit Dimension:%s %d\n", BOLD, RESET, node->data.internal.splitDim);
-        printf("%sSplit Value:%s %.4f\n", BOLD, RESET, node->data.internal.splitValue);
-        printf("%sApprox Counter:%s %u\n", BOLD, RESET, node->data.internal.approximateCounter);
-        printf("%sLeft Child:%s %p\n", BOLD, RESET, (void*)node->data.internal.left);
-        printf("%sRight Child:%s %p\n", BOLD, RESET, (void*)node->data.internal.right);
+        printf("%sSplit Dimension:%s %d\n", ANSI_BOLD, ANSI_RESET, node->data.internal.splitDim);
+        printf("%sSplit Value:%s %.4f\n", ANSI_BOLD, ANSI_RESET, node->data.internal.splitValue);
+        printf("%sApprox Counter:%s %u\n", ANSI_BOLD, ANSI_RESET, node->data.internal.approximateCounter);
+        printf("%sLeft Child:%s %p\n", ANSI_BOLD, ANSI_RESET, (void*)node->data.internal.left);
+        printf("%sRight Child:%s %p\n", ANSI_BOLD, ANSI_RESET, (void*)node->data.internal.right);
 
         uint32_t leftSize = node->data.internal.left ? getNodeSize(node->data.internal.left) : 0;
         uint32_t rightSize = node->data.internal.right ? getNodeSize(node->data.internal.right) : 0;
 
-        printf("%sChildren Sizes:%s L=%u R=%u (sum=%u)\n", BOLD, RESET, leftSize, rightSize, leftSize + rightSize);
+        printf("%sChildren Sizes:%s L=%u R=%u (sum=%u)\n", ANSI_BOLD, ANSI_RESET, leftSize, rightSize, leftSize + rightSize);
 
         if(leftSize + rightSize > 0)
         {
             float ratio = (float)node->data.internal.approximateCounter / (leftSize + rightSize);
-            printf("%sCounter Ratio:%s %.2f %s\n", BOLD, RESET, ratio, (ratio >= 0.5f && ratio <= 2.0f) ? "" : "(INCONSISTENT)");
+            printf("%sCounter Ratio:%s %.2f %s\n", ANSI_BOLD, ANSI_RESET, ratio, (ratio >= 0.5f && ratio <= 2.0f) ? "" : "(INCONSISTENT)");
         }
     }
     else
     {
-        printf("%sPoints Count:%s %zu\n", BOLD, RESET, node->data.leaf.pointsCount);
+        printf("%sPoints Count:%s %zu\n", ANSI_BOLD, ANSI_RESET, node->data.leaf.pointsCount);
 
         if(node->data.leaf.points && node->data.leaf.pointsCount > 0)
         {
-            printf("%sFirst 5 points:%s\n", BOLD, RESET);
+            printf("%sFirst 5 points:%s\n", ANSI_BOLD, ANSI_RESET);
 
             for(size_t i = 0; i < 5 && i < node->data.leaf.pointsCount; ++i)
             {
@@ -216,7 +216,7 @@ void printNodeTree(KDNode* node, int level, const char* prefix, bool isLast)
 
     if(node->type == INTERNAL)
     {
-        printf("[I] d:%d v:%.2f cnt:%s%-4u%s", node->data.internal.splitDim, node->data.internal.splitValue, BOLD, node->data.internal.approximateCounter, RESET);
+        printf("[I] d:%d v:%.2f cnt:%s%-4u%s", node->data.internal.splitDim, node->data.internal.splitValue, ANSI_BOLD, node->data.internal.approximateCounter, ANSI_RESET);
 
         if(node->data.internal.left || node->data.internal.right)
         {
@@ -227,7 +227,7 @@ void printNodeTree(KDNode* node, int level, const char* prefix, bool isLast)
     }
     else
     {
-        printf("[L] pts:%s%-3zu%s", BOLD, node->data.leaf.pointsCount, RESET);
+        printf("[L] pts:%s%-3zu%s", ANSI_BOLD, node->data.leaf.pointsCount, ANSI_RESET);
 
         if(node->data.leaf.pointsCount > 0 && node->data.leaf.points)
         {
@@ -297,7 +297,7 @@ void printKDTree(KDNode* root, Style style)
     }
 
     printBoldSeparator();
-    printf("%sKD-TREE (Style: ", BOLD);
+    printf("%sKD-TREE (Style: ", ANSI_BOLD);
 
     switch(style)
     {
@@ -312,7 +312,7 @@ void printKDTree(KDNode* root, Style style)
             break;
     }
 
-    printf(")%s\n", RESET);
+    printf(")%s\n", ANSI_RESET);
     printSeparator();
 
     switch(style)
@@ -323,13 +323,13 @@ void printKDTree(KDNode* root, Style style)
             printf("\n");
             break;
         case TREE:
-            printf("%sRoot%s\n", BOLD, RESET);
+            printf("%sRoot%s\n", ANSI_BOLD, ANSI_RESET);
             printNodeTree(root, 0, "", 1);
             break;
         case DETAILED:
-            printf("\n%s=== ROOT NODE ===%s\n", BOLD, RESET);
+            printf("\n%s=== ROOT NODE ===%s\n", ANSI_BOLD, ANSI_RESET);
             printNodeDetailed(root);
-            printf("\n%s=== TREE TRAVERSAL ===%s\n", BOLD, RESET);
+            printf("\n%s=== TREE TRAVERSAL ===%s\n", ANSI_BOLD, ANSI_RESET);
             printNodeTree(root, 0, "", 1);
             break;
     }
@@ -346,7 +346,7 @@ void printKDTreeOnDpu(DPUContext* dpuCtx, uint32_t dpuId, Style style)
         return;
     }
 
-    printf("\n%s[Loading tree from DPU %u...]%s\n", BOLD, dpuId, RESET);
+    printf("\n%s[Loading tree from DPU %u...]%s\n", ANSI_BOLD, dpuId, ANSI_RESET);
 
     size_t treeSize = 0;
     int ret = dpuTransferDataFromDpu(dpuCtx, dpuId, &treeSize, sizeof(size_t), DPU_XFER_DEFAULT);
@@ -403,13 +403,13 @@ void printKDTreeStats(KDNode* root)
     computeStats(root, &stats, 0);
     stats.avgLeafSize = stats.leaf > 0 ? (double)stats.totalPoints / stats.leaf : 0.0;
 
-    printf("\n%sTREE STATISTICS%s\n", BOLD, RESET);
-    printf("  ├─ Total nodes: %s%zu%s\n", BOLD, stats.internal + stats.leaf, RESET);
+    printf("\n%sTREE STATISTICS%s\n", ANSI_BOLD, ANSI_RESET);
+    printf("  ├─ Total nodes: %s%zu%s\n", ANSI_BOLD, stats.internal + stats.leaf, ANSI_RESET);
     printf("  ├─ Internal nodes: %zu\n", stats.internal);
     printf("  ├─ Leaf nodes: %zu\n", stats.leaf);
-    printf("  ├─ Total points: %s%zu%s\n", BOLD, stats.totalPoints, RESET);
-    printf("  ├─ Depth range: %s%d - %d%s\n", BOLD, stats.minDepth, stats.maxDepth, RESET);
-    printf("  ├─ Leaf size: avg=%.1f max=%s%zu%s\n", stats.avgLeafSize, BOLD, stats.maxLeafSize, RESET);
+    printf("  ├─ Total points: %s%zu%s\n", ANSI_BOLD, stats.totalPoints, ANSI_RESET);
+    printf("  ├─ Depth range: %s%d - %d%s\n", ANSI_BOLD, stats.minDepth, stats.maxDepth, ANSI_RESET);
+    printf("  ├─ Leaf size: avg=%.1f max=%s%zu%s\n", stats.avgLeafSize, ANSI_BOLD, stats.maxLeafSize, ANSI_RESET);
 
     if(stats.internal > 0)
     {
@@ -421,7 +421,7 @@ void printKDTreeStats(KDNode* root)
         if(leftSize > 0 && rightSize > 0)
         {
             float balance = (float)(leftSize > rightSize ? rightSize : leftSize) / (leftSize + rightSize);
-            printf("  └─ Root balance: %s%.2f%s\n", BOLD, balance, RESET);
+            printf("  └─ Root balance: %s%.2f%s\n", ANSI_BOLD, balance, ANSI_RESET);
         }
     }
 }
@@ -431,7 +431,7 @@ void printGroupInfo(KDGroup** groups, uint8_t numGroups)
     if(!groups) return;
 
     printBoldSeparator();
-    printf("%sGROUP DECOMPOSITION (%u groups)%s\n", BOLD, numGroups, RESET);
+    printf("%sGROUP DECOMPOSITION (%u groups)%s\n", ANSI_BOLD, numGroups, ANSI_RESET);
     printSeparator();
 
     for(uint8_t i = 0; i < numGroups; ++i)
@@ -439,8 +439,8 @@ void printGroupInfo(KDGroup** groups, uint8_t numGroups)
         if(!groups[i])
             continue;
 
-        printf("\n%sGroup %d%s [size: %.0f-%.0f]\n", BOLD, i, RESET, groups[i]->minSize, groups[i]->maxSize);
-        printf("  Nodes: %s%zu%s\n", BOLD, groups[i]->count, RESET);
+        printf("\n%sGroup %d%s [size: %.0f-%.0f]\n", ANSI_BOLD, i, ANSI_RESET, groups[i]->minSize, groups[i]->maxSize);
+        printf("  Nodes: %s%zu%s\n", ANSI_BOLD, groups[i]->count, ANSI_RESET);
 
         if(groups[i]->count > 0 && groups[i]->rootNodes)
         {
@@ -472,19 +472,19 @@ void validateTreeStructure(KDNode* root)
 
     Issues issues = {0};
 
-    printf("\n%sVALIDATING TREE STRUCTURE%s\n", BOLD, RESET);
+    printf("\n%sVALIDATING TREE STRUCTURE%s\n", ANSI_BOLD, ANSI_RESET);
     validateNode(root, NULL, &issues);
 
-    printf("  ├─ Nodes visited: %s%zu%s\n", BOLD, issues.visited, RESET);
-    printf("  ├─ Invalid parents: %s%zu%s\n", BOLD, issues.invalidParents, RESET);
-    printf("  ├─ Null children: %s%zu%s\n", BOLD, issues.nullChildren, RESET);
-    printf("  └─ Cycles detected: %s%zu%s\n", BOLD, issues.cycles, RESET);
+    printf("  ├─ Nodes visited: %s%zu%s\n", ANSI_BOLD, issues.visited, ANSI_RESET);
+    printf("  ├─ Invalid parents: %s%zu%s\n", ANSI_BOLD, issues.invalidParents, ANSI_RESET);
+    printf("  ├─ Null children: %s%zu%s\n", ANSI_BOLD, issues.nullChildren, ANSI_RESET);
+    printf("  └─ Cycles detected: %s%zu%s\n", ANSI_BOLD, issues.cycles, ANSI_RESET);
 
     if(issues.invalidParents + issues.nullChildren + issues.cycles == 0)
-        printf("%sTree structure is valid%s\n", BOLD, RESET);
+        printf("%sTree structure is valid%s\n", ANSI_BOLD, ANSI_RESET);
     else
-        printf("%sTree has %zu issues%s\n", BOLD,
-               issues.invalidParents + issues.nullChildren + issues.cycles, RESET);
+        printf("%sTree has %zu issues%s\n", ANSI_BOLD,
+               issues.invalidParents + issues.nullChildren + issues.cycles, ANSI_RESET);
 }
 
 void checkApproximateCounters(KDNode* root)
@@ -500,18 +500,18 @@ void checkApproximateCounters(KDNode* root)
         .zeroCounters = 0
     };
 
-    printf("\n%sCHECKING APPROXIMATE COUNTERS%s\n", BOLD, RESET);
+    printf("\n%sCHECKING APPROXIMATE COUNTERS%s\n", ANSI_BOLD, ANSI_RESET);
     checkNode(root, &stats);
 
-    printf("  ├─ Nodes checked: %s%zu%s\n", BOLD, stats.checked, RESET);
-    printf("  ├─ Inconsistent: %s%zu%s\n", BOLD, stats.inconsistent, RESET);
-    printf("  ├─ Zero counters: %s%zu%s\n", BOLD, stats.zeroCounters, RESET);
-    printf("  ├─ Ratio range: %s%.2f - %.2f%s\n", BOLD, stats.minRatio, stats.maxRatio, RESET);
+    printf("  ├─ Nodes checked: %s%zu%s\n", ANSI_BOLD, stats.checked, ANSI_RESET);
+    printf("  ├─ Inconsistent: %s%zu%s\n", ANSI_BOLD, stats.inconsistent, ANSI_RESET);
+    printf("  ├─ Zero counters: %s%zu%s\n", ANSI_BOLD, stats.zeroCounters, ANSI_RESET);
+    printf("  ├─ Ratio range: %s%.2f - %.2f%s\n", ANSI_BOLD, stats.minRatio, stats.maxRatio, ANSI_RESET);
 
     if(stats.inconsistent == 0)
-        printf("  └─ %sAll counters are consistent%s\n", BOLD, RESET);
+        printf("  └─ %sAll counters are consistent%s\n", ANSI_BOLD, ANSI_RESET);
     else
-        printf("  └─ %sFound %zu inconsistent counters%s\n", BOLD, stats.inconsistent, RESET);
+        printf("  └─ %sFound %zu inconsistent counters%s\n", ANSI_BOLD, stats.inconsistent, ANSI_RESET);
 }
 
 void printMemoryLayout(DPUContext* dpuCtx)
@@ -562,15 +562,15 @@ void printMemoryLayout(DPUContext* dpuCtx)
     }
 
     printBoldSeparator();
-    printf("%sMEMORY LAYOUT (%zu DPUs)%s\n", BOLD, P, RESET);
+    printf("%sMEMORY LAYOUT (%zu DPUs)%s\n", ANSI_BOLD, P, ANSI_RESET);
     printSeparator();
 
     size_t totalNodes = 0, totalReplicas = 0, totalMemory = 0;
 
     for(size_t i = 0; i < P; ++i)
     {
-        printf("%sDPU %2zu:%s\n", BOLD, i, RESET);
-        printf("  ├─ Nodes: %s%zu%s\n", BOLD, nodesPerDpu[i], RESET);
+        printf("%sDPU %2zu:%s\n", ANSI_BOLD, i, ANSI_RESET);
+        printf("  ├─ Nodes: %s%zu%s\n", ANSI_BOLD, nodesPerDpu[i], ANSI_RESET);
         printf("  ├─ Replicas: %zu\n", replicasPerDpu[i]);
         printf("  ├─ Memory: %.2f KB\n", (double)memoryPerDpu[i] / 1024.0);
 
@@ -587,11 +587,11 @@ void printMemoryLayout(DPUContext* dpuCtx)
 
     printBoldSeparator();
 
-    printf("%sTOTALS:%s\n", BOLD, RESET);
-    printf("  ├─ Nodes: %s%zu%s\n", BOLD, totalNodes, RESET);
+    printf("%sTOTALS:%s\n", ANSI_BOLD, ANSI_RESET);
+    printf("  ├─ Nodes: %s%zu%s\n", ANSI_BOLD, totalNodes, ANSI_RESET);
     printf("  ├─ Replicas: %zu\n", totalReplicas);
     printf("  ├─ Memory: %.2f KB\n", (double)totalMemory / 1024.0);
-    printf("  └─ Avg nodes/DPU: %s%.1f%s\n", BOLD, P > 0 ? (double)totalNodes / P : 0.0, RESET);
+    printf("  └─ Avg nodes/DPU: %s%.1f%s\n", ANSI_BOLD, P > 0 ? (double)totalNodes / P : 0.0, ANSI_RESET);
     printBoldSeparator();
 
     free(nodesPerDpu);
