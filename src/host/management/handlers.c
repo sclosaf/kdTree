@@ -58,11 +58,13 @@ int handleInfo(void* context)
     switch(ctx)
     {
         case COMPACT:
-            print
+            break;
 
         case TREE:
+            break;
 
         case DETAILED:
+            break;
     }
 
     return 0;
