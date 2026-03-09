@@ -329,7 +329,7 @@ KDTree* buildPIMKDTree(point** points, size_t n)
         if(subtrees[i])
             initializeSubtreeCounters(subtrees[i], n);
 
-    scatterReplica(subtrees, n, cacheForest, alloc);
+    scatterReplica(subtrees, cacheForest, alloc);
 
     freeDpuAllocation(alloc);
 
