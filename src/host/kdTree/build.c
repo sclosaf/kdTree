@@ -267,7 +267,7 @@ KDTree* buildPIMKDTree(point** points, size_t n)
 
         currentId = 0;
         found = false;
-        DPU_FOREACH(dpu_set, dpu)
+        DPU_FOREACH(set, dpu)
         {
             if(currentId == i)
             {
