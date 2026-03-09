@@ -235,7 +235,7 @@ int processCommand(CommandType type, char* line)
             return 0;
 
         case INFO:
-            if(argc != 2 || argv[i] == NULL)
+            if(argc != 1 || argv[i] == NULL)
                 return -1;
 
             Style* style = (Style*)malloc(sizeof(Style));
@@ -257,11 +257,8 @@ int processCommand(CommandType type, char* line)
             return h->handler(NULL);
 
         case CONFIG:
-            if(argc != 2 || argv[i] == NULL)
-            {
-                printf("ERROR %d", argc);
+            if(argc != 1 || argv[i] == NULL)
                 return -1;
-            }
 
             ConfigContext* ctx = (ConfigContext*)malloc(sizeof(ConfigContext));
 
