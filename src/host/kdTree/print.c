@@ -340,7 +340,7 @@ void printKDTree(KDNode* root, Style style)
 
 void printKDTreeOnDpu(uint32_t dpuId, Style style)
 {
-    dpu_set_t set;
+    struct dpu_set_t set;
     uint32_t nPim = getConfig()->nPim;
 
     if(dpuId >= nPim)
@@ -534,7 +534,7 @@ void checkApproximateCounters(KDNode* root)
 
 void printMemoryLayout()
 {
-    dpu_set_t set;
+    struct dpu_set_t set;
     uint32_t nPim = getConfig()->nPim;
     DPU_ASSERT(dpu_alloc(nPim, NULL, &set));
 
