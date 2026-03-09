@@ -37,8 +37,6 @@ static CommandType getCommandType(char* cmd)
             return handler->type;
     }
 
-    printf("UNKNOWN\n");
-
     return UNKNOWN;
 }
 
@@ -274,6 +272,8 @@ int processCommand(CommandType type, char* line)
                 *ctx = SPECIFICS;
             else
                 return -1;
+
+            printf("CTX\n");
 
             h = &registry->handlers[type];
             return h->handler(ctx);
