@@ -48,7 +48,7 @@ KDNode** collectSubtreesFromDpus(size_t* totalNodes);
 void collectNodeReferences(KDNode* node, KDNode*** refs, size_t* count, size_t* capacity);
 void scatterReplica(KDNode** subtrees, KDNode* cacheForest, DpuAllocation* alloc);
 void sendSketchToAllDpus(KDNode* sketch);
-DpuAllocation* createDpuAllocation(size_t numDpus);
+DpuAllocation* createDpuAllocation();
 uint32_t allocateOnDpu(DpuAllocation* alloc, uint32_t dpuId, size_t size);
 
 #endif
