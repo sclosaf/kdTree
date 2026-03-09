@@ -102,7 +102,7 @@ void initCommandRegistry()
         {CLUSTER_DBSCAN, "dbscan", "db", "Run DBSCAN clustering", NULL, handleClusterDBSCAN},
         {TEST, "test", "t", "Run test suite", NULL, handleTest},
         {BENCHMARK, "bench", "be", "Run benchmarks", NULL, handleBenchmark},
-        {INFO, "info", "inf", "Display tree information", "-c|-d|-t", handleInfo},
+        {INFO, "info", "inf", "Display tree information", "[-c|-d|-t]", handleInfo},
         {VALIDATE, "validate", "v", "Validate tree structure", NULL, handleValidate},
         {CONFIG, "config", "c", "Configure system parameters", NULL, handleConfig},
     };
