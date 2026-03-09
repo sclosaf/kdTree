@@ -24,7 +24,7 @@ void logError(const char* msg)
     char timestamp[20];
     getCurrentTimestamp(timestamp, sizeof(timestamp));
 
-    fprintf(logger.stream, "%s[%s] ERROR%s: %s%s\n", RED, timestamp, RESET, msg, RESET);
+    fprintf(logger.stream, "%s[%s] ERROR%s: %s%s\n", ANSI_RED, timestamp, ANSI_RESET, msg, ANSI_RESET);
     fflush(logger.stream);
 }
 
@@ -36,7 +36,7 @@ void logWarning(const char* msg)
     char timestamp[20];
     getCurrentTimestamp(timestamp, sizeof(timestamp));
 
-    fprintf(logger.stream, "%s[%s] WARNING%s: %s%s\n", YELLOW, timestamp, RESET, msg, RESET);
+    fprintf(logger.stream, "%s[%s] WARNING%s: %s%s\n", ANSI_YELLOW, timestamp, ANSI_RESET, msg, ANSI_RESET);
     fflush(logger.stream);
 }
 
@@ -48,7 +48,7 @@ void logDebug(const char* msg)
     char timestamp[20];
     getCurrentTimestamp(timestamp, sizeof(timestamp));
 
-    fprintf(logger.stream, "%s[%s] DEBUG%s: %s%s\n", BLUE, timestamp, RESET, msg, RESET);
+    fprintf(logger.stream, "%s[%s] DEBUG%s: %s%s\n", ANSI_BLUE, timestamp, ANSI_RESET, msg, ANSI_RESET);
     fflush(logger.stream);
 }
 
