@@ -50,6 +50,19 @@ int handleBenchmark(void* context)
 
 int handleInfo(void* context)
 {
+    Style ctx = *(Style*)context;
+    free(context);
+
+    switch(ctx)
+    {
+        case COMPACT:
+            print
+
+        case TREE:
+
+        case DETAILED:
+    }
+
     return 0;
 }
 
@@ -63,7 +76,6 @@ int handleConfig(void* context)
     ConfigContext ctx = *(ConfigContext*)context;
     free(context);
 
-    printf("SWITCH\n");
     switch(ctx)
     {
         case INIT:
