@@ -193,6 +193,7 @@ int parseCommand(CommandType type, char* line)
     }
 
     int i = 1;
+    CommandHandler* h = NULL;
 
     switch(type)
     {
@@ -238,15 +239,15 @@ int parseCommand(CommandType type, char* line)
             else
                 return -1;
 
-            CommandHandler* h = &registry->handlers[type];
+            h = &registry->handlers[type];
             return h->handler(style);
 
         case VALIDATE:
-            CommandHandler* h = &registry->handlers[type];
+            h = &registry->handlers[type];
             return h->handler(NULL);
 
         case CONFIG:
-            CommandHandler* h = &registry->handlers[type]; // Implement Constants and specifics
+            h = &registry->handlers[type]; // Implement Constants and specifics
             return h->handler(NULL);
 
         default:
