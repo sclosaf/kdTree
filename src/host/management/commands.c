@@ -79,7 +79,7 @@ void run()
             break;
         }
 
-        CommandType type = getCommandType(copy);
+        CommandType type = getCommandType(line);
         int result = processCommand(type, copy);
 
         if(result != 0)
