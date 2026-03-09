@@ -273,6 +273,7 @@ int processCommand(CommandType type, char* line)
             return h->handler(ctx);
 
         default:
+            printf("default");
             return -1;
     }
 }
