@@ -258,7 +258,10 @@ int processCommand(CommandType type, char* line)
 
         case CONFIG:
             if(argc != 2 || argv[i] == NULL)
+            {
+                printf("ERROR %d", argc);
                 return -1;
+            }
 
             ConfigContext* ctx = (ConfigContext*)malloc(sizeof(ConfigContext));
 
@@ -272,8 +275,6 @@ int processCommand(CommandType type, char* line)
                 *ctx = SPECIFICS;
             else
                 return -1;
-
-            printf("CTX\n");
 
             h = &registry->handlers[type];
             return h->handler(ctx);
