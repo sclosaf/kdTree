@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 
+#include "kdTree/print.h"
 #include "kdTree/utils.h"
 #include "kdTree/build.h"
 
