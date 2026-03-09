@@ -38,15 +38,15 @@
 #endif
 
 #ifndef ANSI_RED
-#define ANSI_RED     "\x1b[31m"
+#define ANSI_RED "\x1b[31m"
 #endif
 
 #ifndef ANSI_YELLOW
-#define ANSI_YELLOW  "\x1b[33m"
+#define ANSI_YELLOW "\x1b[33m"
 #endif
 
 #ifndef ANSI_BLUE
-#define ANSI_BLUE    "\x1b[34m"
+#define ANSI_BLUE "\x1b[34m"
 #endif
 
 #ifndef ANSI_BOLD
@@ -54,7 +54,7 @@
 #endif
 
 #ifndef ANSI_RESET
-#define ANSI_RESET   "\x1b[0m"
+#define ANSI_RESET "\x1b[0m"
 #endif
 
 #endif
