@@ -20,7 +20,6 @@ typedef struct DpuAllocation
 {
     uint32_t* nextOffset;
     uint32_t* allocationCount;
-    size_t numDpus;
 } DpuAllocation;
 
 float findMedian(point** points, size_t start, size_t end, uint8_t dim);
@@ -45,10 +44,10 @@ void freeMatrix(void** matrix, size_t rows);
 void freeLeafNode(KDNode* node);
 void freeDpuAllocation(DpuAllocation* alloc);
 
-KDNode** collectSubtreesFromDpus(DPUContext* dpuCtx, size_t P, size_t* totalNodes);
+KDNode** collectSubtreesFromDpus(size_t* totalNodes);
 void collectNodeReferences(KDNode* node, KDNode*** refs, size_t* count, size_t* capacity);
-void scatterReplica(DPUContext* dpuCtx, KDNode** subtrees, size_t P, size_t totalPoints, KDNode* cacheForest, DpuAllocation* alloc);
-void sendSketchToAllDpus(DPUContext* ctx, KDNode* sketch);
+void scatterReplica(KDNode** subtrees, KDNode* cacheForest, DpuAllocation* alloc);
+void sendSketchToAllDpus(KDNode* sketch);
 DpuAllocation* createDpuAllocation(size_t numDpus);
 uint32_t allocateOnDpu(DpuAllocation* alloc, uint32_t dpuId, size_t size);
 
