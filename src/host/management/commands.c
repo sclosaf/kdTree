@@ -180,7 +180,7 @@ int parseCommand(CommandType type, char* line)
         return -1;
     }
 
-    char* argv[64];
+    char* argv[64] = {NULL};
     int argc = 0;
 
     argv[argc++] = cmdStr;
@@ -225,7 +225,7 @@ int parseCommand(CommandType type, char* line)
             return 0;
 
         case INFO:
-            if(argc >= 2)
+            if(argc >= 2  || argv[i] == NULL)
                 return -1;
 
             Style* style = (Style*)malloc(sizeof(Style));
