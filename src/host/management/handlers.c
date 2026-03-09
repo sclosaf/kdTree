@@ -1,66 +1,61 @@
 #include "management/interface.h"
 
-int handleBuild()
+int handleBuild(void* context)
 {
     return 0;
 }
 
-int handleQuery()
+int handleInsert(void* context)
 {
     return 0;
 }
 
-int handleInsert()
+int handleDelete(void* context)
 {
     return 0;
 }
 
-int handleDelete()
+int handleKNN(void* context)
 {
     return 0;
 }
 
-int handleKNN()
+int handleRange(void* context)
 {
     return 0;
 }
 
-int handleRange()
+int handleClusterDPC(void* context)
 {
     return 0;
 }
 
-int handleClusterDPC()
+int handleClusterDBSCAN(void* context)
 {
     return 0;
 }
 
-int handleClusterDBSCAN()
+int handleTest(void* context)
 {
     return 0;
 }
 
-int handleTest()
+int handleBenchmark(void* context)
 {
     return 0;
 }
 
-int handleBenchmark()
+int handleInfo(void* context)
 {
     return 0;
 }
 
-int handleInfo()
+int handleValidate(void* context)
 {
     return 0;
 }
 
-int handleValidate()
-{
-    return 0;
-}
-
-int handleConfig()
+int handleConfig(void* context)
 {
     return 0;
 }
