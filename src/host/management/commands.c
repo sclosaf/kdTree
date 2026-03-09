@@ -37,6 +37,8 @@ static CommandType getCommandType(char* cmd)
             return handler->type;
     }
 
+    printf("UNKNOWN\n")
+
     return UNKNOWN;
 }
 
