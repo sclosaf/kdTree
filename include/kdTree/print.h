@@ -11,7 +11,19 @@ typedef enum Style
     COMPACT,
     TREE,
     DETAILED,
+    VALIDATE,
+    APPROXIMATE,
+    STATS,
+    MEMORY,
+    ONDPU,
+    FULL,
 } Style;
+
+typedef struct PrintOptions
+{
+    Style style;
+    uint32_t dpuId;
+} PrintOptions;
 
 typedef struct NodeStatistics
 {
@@ -42,10 +54,9 @@ typedef struct Issues
     size_t cycles;
 } Issues;
 
-void printKDTree(KDNode* root, Style style);
+void printKDTree(KDNode* root, PrintOptions opt);
 void printKDTreeOnDpu(uint32_t dpuId, Style style);
 void printKDTreeStats(KDNode* root);
-void printGroupInfo(KDGroup** groups, uint8_t numGroups);
 
 void printNode(KDNode* node, int level, Style style);
 void printNodeBrief(KDNode* node);

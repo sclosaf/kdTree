@@ -54,26 +54,11 @@ int handleBenchmark(void* context)
 
 int handleInfo(void* context)
 {
-    Style ctx = *(Style*)context;
+    PrintConfig* ctx = (PrintConfig*)context;
     free(context);
 
-    switch(ctx)
-    {
-        case COMPACT:
-            break;
+    printKDTree(getData()->tree, ctx);
 
-        case TREE:
-            break;
-
-        case DETAILED:
-            break;
-    }
-
-    return 0;
-}
-
-int handleValidate(void* context)
-{
     return 0;
 }
 

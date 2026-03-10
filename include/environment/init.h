@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "kdTree/types.h"
+
 typedef struct Config
 {
     uint32_t nPoint;
@@ -16,7 +18,16 @@ typedef struct Config
     uint16_t chunkSize;
 } Config;
 
+typedef struct Data
+{
+    KDTree* tree;
+} Data;
+
 const Config* getConfig();
+Data* getData();
+
+void freeData();
+
 void initConfig();
 void resetConfig();
 void printConfig();

@@ -7,6 +7,8 @@
 #include <limits.h>
 #include <libgen.h>
 
+#include "kdTree/utils.h"
+
 #include "environment/init.h"
 #include "environment/constants.h"
 #include "management/logging.h"
@@ -22,6 +24,11 @@ static Config config =
     .oversamplingRate = DEFAULT_OVERSAMPLING_RATE,
     .sketchHeight = DEFAULT_SKETCH_HEIGHT,
     .chunkSize = DEFAULT_CHUNK_SIZE
+};
+
+static Data data =
+{
+    .tree = NULL
 };
 
 static bool configInitialized = false;
@@ -135,9 +142,7 @@ static void setValue(const char* key, const char* value)
                     setStream(stdout);
             }
             else
-            {
                 setStream(stdout);
-            }
         }
     }
     else if(strcmp(key, "severity") == 0)
@@ -223,4 +228,20 @@ void resetConfig()
     config.sketchHeight = DEFAULT_SKETCH_HEIGHT;
     config.chunkSize = DEFAULT_CHUNK_SIZE;
     configInitialized = true;
+}
+
+Data* getData()
+{
+    return &data;
+}
+
+void freeData()
+{
+    if(data.tree)
+    {
+        freeKDTree(data.tree->root);
+        free(data.tree);
+
+        data.tree = NULL;
+    }
 }

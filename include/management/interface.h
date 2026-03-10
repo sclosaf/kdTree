@@ -18,7 +18,6 @@ typedef enum CommandType
     TEST,
     BENCHMARK,
     INFO,
-    VALIDATE,
     CONFIG,
     QUIT,
     UNKNOWN
@@ -68,7 +67,6 @@ int handleClusterDBSCAN(void* context);
 int handleTest(void* context);
 int handleBenchmark(void* context);
 int handleInfo(void* context);
-int handleValidate(void* context);
 int handleConfig(void* context);
 
 #endif

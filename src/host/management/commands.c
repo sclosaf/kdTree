@@ -109,8 +109,7 @@ void initCommandRegistry()
         {CLUSTER_DBSCAN, "dbscan", "db", "Run DBSCAN clustering", NULL, handleClusterDBSCAN},
         {TEST, "test", "t", "Run test suite", NULL, handleTest},
         {BENCHMARK, "bench", "be", "Run benchmarks", NULL, handleBenchmark},
-        {INFO, "info", "inf", "Display tree information", "[-c|-d|-t]", handleInfo},
-        {VALIDATE, "validate", "v", "Validate tree structure", NULL, handleValidate},
+        {INFO, "info", "inf", "Display tree information", "[-c|-t|-d|-v|-a|-s|-m|-o <id>|-f]", handleInfo},
         {CONFIG, "config", "c", "Configure system parameters", "[-i|-r|-p|-s]", handleConfig},
     };
 
@@ -238,43 +237,57 @@ int processCommand(CommandType type, char* line)
             return 0;
 
         case INFO:
-            if(argc < 2 || argv[1] == NULL)
-                return -1;
+            PrintOptions* opt =
+            {
+                .style = COMPACT,
+                .dpuId = 0
+            };
 
-            Style* style = (Style*)malloc(sizeof(Style));
+            if(strcmp(argv[1], "-c") == 0)
+                opt->style =  COMPACT;
+            else if(strcmp(argv[1], "-t") == 0)
+                opt->style = TREE;
+            else if(strcmp(argv[1], "-d") == 0)
+                opt->style = DETAILED;
+            else if(strcmp(argv[1], "-v") == 0)
+                opt->style = VALIDATE;
+            else if(strcmp(argv[1], "-a") == 0)
+                opt->style = APPROXIMATE;
+            else if(strcmp(argv[1], "-s") == 0)
+                opt->style = STATS;
+            else if(strcmp(argv[1], "-m") == 0)
+                opt->style = MEMORY;
+            else if(strcmp(argv[1], "-o") == 0)
+            {
+                if(argc != 2 || argv[2] == NULL)
+                    return -1;
 
-            if(strcmp(argv[i], "-c") == 0)
-                *style = COMPACT;
-            else if(strcmp(argv[i], "-d") == 0)
-                *style = DETAILED;
-            else if(strcmp(argv[i], "-t") == 0)
-                *style = TREE;
-            else
-                return -1;
+                uint32_t id = atoi(argv[i+1]);
+
+                if(id < 0)
+                    return -1;
+
+                opt->style = ONDPU;
+                opt->dpuId = (uint32_t)id;
+            }
+            else if(strcmp(flag, "-f") == 0)
+                opt->style = FULL;
 
             h = &registry->handlers[type];
-            return h->handler(style);
-
-        case VALIDATE:
-            h = &registry->handlers[type];
-            return h->handler(NULL);
+            return h->handler(opt);
 
         case CONFIG:
-            if(argc < 2 || argv[1] == NULL)
-                return -1;
-
             ConfigContext* ctx = (ConfigContext*)malloc(sizeof(ConfigContext));
+            *ctx = PRINT;
 
-            if(strcmp(argv[i], "-i") == 0)
+            if(strcmp(argv[1], "-i") == 0)
                 *ctx = INIT;
-            else if(strcmp(argv[i], "-r") == 0)
+            else if(strcmp(argv[1], "-r") == 0)
                 *ctx = RESET;
-            else if(strcmp(argv[i], "-p") == 0)
+            else if(strcmp(argv[1], "-p") == 0)
                 *ctx = PRINT;
-            else if(strcmp(argv[i], "-s") == 0)
+            else if(strcmp(argv[1], "-s") == 0)
                 *ctx = SPECIFICS;
-            else
-                return -1;
 
             h = &registry->handlers[type];
             return h->handler(ctx);

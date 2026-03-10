@@ -288,18 +288,15 @@ void printNode(KDNode* node, int level, Style style)
     }
 }
 
-void printKDTree(KDNode* root, Style style)
+void printKDTree(KDNode* root, PrintOptions* opt)
 {
-    if(!root)
-    {
-        printf("KD-Tree: NULL\n");
+    if(!opt)
         return;
-    }
 
     printBoldSeparator();
     printf("%sKD-TREE (Style: ", ANSI_BOLD);
 
-    switch(style)
+    switch(opt->style)
     {
         case COMPACT:
             printf("COMPACT");
@@ -310,32 +307,142 @@ void printKDTree(KDNode* root, Style style)
         case DETAILED:
             printf("DETAILED");
             break;
+        case VALIDATE:
+            printf("VALIDATE");
+            break;
+        case APPROXIMATE:
+            printf("APPROXIMATE COUNTER CHECK");
+            break;
+        case STATS:
+            printf("STATISTICS");
+            break;
+        case MEMORY:
+            printf("MEMORY");
+            break;
+        case ONDPU:
+            printf("ON DPU %u", opt.dpuId);
+            break;
+        case FULL:
+            printf("FULL");
+            break;
+        default:
+            printf("UNKNOWN");
+            break;
     }
 
     printf(")%s\n", ANSI_RESET);
     printSeparator();
 
-    switch(style)
+    switch(opt->style)
     {
         case COMPACT:
+            if(!root)
+            {
+                printf("KD-Tree: NULL\n");
+                break;
+            }
+
             printf("Root: ");
             printNodeBrief(root);
             printf("\n");
+
+            printKDTreeStats(root);
             break;
+
         case TREE:
+            if(!root)
+            {
+                printf("KD-Tree: NULL\n");
+                break;
+            }
             printf("%sRoot%s\n", ANSI_BOLD, ANSI_RESET);
             printNodeTree(root, 0, "", 1);
+
+            printKDTreeStats(root);
             break;
+
         case DETAILED:
+            if(!root)
+            {
+                printf("KD-Tree: NULL\n");
+                break;
+            }
             printf("\n%s=== ROOT NODE ===%s\n", ANSI_BOLD, ANSI_RESET);
             printNodeDetailed(root);
+
             printf("\n%s=== TREE TRAVERSAL ===%s\n", ANSI_BOLD, ANSI_RESET);
             printNodeTree(root, 0, "", 1);
+
+            printKDTreeStats(root);
+            break;
+
+        case VALIDATE:
+            if(!root)
+            {
+                printf("KD-Tree: NULL\n");
+                break;
+            }
+
+            validateTreeStructure(root);
+            break;
+
+        case APPROXIMATE:
+            if(!root)
+            {
+                printf("KD-Tree: NULL\n");
+                break;
+            }
+
+            checkApproximateCounters(root);
+            break;
+
+        case STATS:
+            if(!root)
+            {
+                printf("KD-Tree: NULL\n");
+                break;
+            }
+
+            printKDTreeStats(root);
+            break;
+
+        case MEMORY:
+            printMemoryLayout();
+            break;
+
+        case ONDPU:
+            if(opt->dpuId >= getConfig()->nPim)
+            {
+                printf("Error: Invalid DPU ID %u (max: %u)\n", opt->dpuId, getConfig()->nPim - 1);
+                break;
+            }
+
+            printKDTreeOnDpu(opt->dpuId, opt->style);
+            break;
+
+        case FULL:
+            if(!root)
+            {
+                printf("KD-Tree: NULL\n");
+                break;
+            }
+
+            printf("\n%s=== ROOT NODE ===%s\n", ANSI_BOLD, ANSI_RESET);
+            printNodeDetailed(root);
+
+            printf("\n%s=== TREE VISUALIZATION ===%s\n", ANSI_BOLD, ANSI_RESET);
+            printNodeTree(root, 0, "", 1);
+
+            printKDTreeStats(root);
+            validateTreeStructure(root);
+            checkApproximateCounters(root);
+
+            break;
+
+        default:
+            printf("UNKNOWN STYLE\n");
             break;
     }
-
-    printKDTreeStats(root);
-    printBoldSeparator();
 }
 
 void printKDTreeOnDpu(uint32_t dpuId, Style style)
@@ -359,11 +466,25 @@ void printKDTreeOnDpu(uint32_t dpuId, Style style)
             found = true;
             break;
         }
+
         currentId++;
     }
 
     if(!found)
     {
+        dpu_free(set);
+        return;
+    }
+
+
+    if(style == MEMORY)
+    {
+        PrintOptions opt = {
+            .style = MEMORY,
+            .dpuId = dpuId
+        };
+
+        printKDTree(NULL, &opt);
         dpu_free(set);
         return;
     }
@@ -375,6 +496,7 @@ void printKDTreeOnDpu(uint32_t dpuId, Style style)
 
     if(treeSize == 0)
     {
+        printf("No tree found on DPU %u\n", dpuId);
         dpu_free(set);
         return;
     }
@@ -392,7 +514,11 @@ void printKDTreeOnDpu(uint32_t dpuId, Style style)
     KDNode* root = deserializeTree(treeData, treeSize);
     if(root)
     {
-        printKDTree(root, style);
+        PrintOptions opt = {
+            .style = style,
+            .dpuId = dpuId
+        };
+        printKDTree(root, &opt);
         freeKDTree(root);
     }
     else
@@ -443,42 +569,6 @@ void printKDTreeStats(KDNode* root)
             printf("  └─ Root balance: %s%.2f%s\n", ANSI_BOLD, balance, ANSI_RESET);
         }
     }
-}
-
-void printGroupInfo(KDGroup** groups, uint8_t numGroups)
-{
-    if(!groups) return;
-
-    printBoldSeparator();
-    printf("%sGROUP DECOMPOSITION (%u groups)%s\n", ANSI_BOLD, numGroups, ANSI_RESET);
-    printSeparator();
-
-    for(uint8_t i = 0; i < numGroups; ++i)
-    {
-        if(!groups[i])
-            continue;
-
-        printf("\n%sGroup %d%s [size: %.0f-%.0f]\n", ANSI_BOLD, i, ANSI_RESET, groups[i]->minSize, groups[i]->maxSize);
-        printf("  Nodes: %s%zu%s\n", ANSI_BOLD, groups[i]->count, ANSI_RESET);
-
-        if(groups[i]->count > 0 && groups[i]->rootNodes)
-        {
-            printf("  Sample roots:\n");
-            size_t sample = groups[i]->count < 5 ? groups[i]->count : 5;
-
-            for(size_t j = 0; j < sample; ++j)
-            {
-                if(groups[i]->rootNodes[j])
-                {
-                    printf("    %2zu: ", j);
-                    printNodeBrief(groups[i]->rootNodes[j]);
-                    printf("\n");
-                }
-            }
-        }
-    }
-
-    printf("\n");
 }
 
 void validateTreeStructure(KDNode* root)
