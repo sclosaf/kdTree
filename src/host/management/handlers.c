@@ -9,6 +9,37 @@
 
 int handleBuild(void* context)
 {
+    BuildContext ctx = *(BuildContext*)context;
+    free(context);
+
+    switch(ctx)
+    {
+        case CHIP:
+            if(getData()->tree)
+                freeData();
+
+            getData()->tree = buildOnChip(readDataset(), getConfig()->nPoints);
+
+            if(getData()->tree)
+                return 0;
+            else
+                return -1;
+
+        case PIM:
+             if(getData()->tree)
+                freeData();
+
+            getData()->tree = buildPIMkdtree(readDataset(), getConfig()->nPoints);
+
+            if(getData()->tree)
+                return 0;
+            else
+                return -1;
+
+        default:
+            return -1;
+    }
+
     return 0;
 }
 
@@ -77,12 +108,16 @@ int handleConfig(void* context)
             resetConfig();
             return 0;
 
-        case PRINT:
+        case CONFIG:
             printConfig();
             return 0;
 
         case SPECIFICS:
             printSystemMetrics();
+            return 0;
+
+        case DATASET:
+            printDataset(readDataset(), getConfig()->nPoints);
             return 0;
 
         default:

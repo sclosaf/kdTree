@@ -5,5 +5,6 @@ int main()
 {
     initConfig();
     run();
+    freeData();
     return 0;
 }

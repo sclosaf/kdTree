@@ -100,7 +100,7 @@ void initCommandRegistry()
 
     CommandHandler defaultHandlers[] =
     {
-        {BUILD, "build", "b", "Build a new PIM-kd-tree", NULL, handleBuild},
+        {BUILD, "build", "b", "Build a new PIM-kd-tree", "[-c|-p]", handleBuild},
         {INSERT, "insert", "i", "Insert points into tree", NULL, handleInsert},
         {DELETE, "delete", "d", "Delete points from tree", NULL, handleDelete},
         {KNN, "knn", "k", "Execute k-nearest neighbor queries", NULL, handleKNN},
@@ -110,7 +110,7 @@ void initCommandRegistry()
         {TEST, "test", "t", "Run test suite", NULL, handleTest},
         {BENCHMARK, "bench", "be", "Run benchmarks", NULL, handleBenchmark},
         {INFO, "info", "inf", "Display tree information", "[-c|-t|-d|-v|-a|-s|-m|-o <id>|-f]", handleInfo},
-        {CONFIG, "config", "c", "Configure system parameters", "[-i|-r|-p|-s]", handleConfig},
+        {CONFIG, "config", "c", "Configure system parameters", "[-i|-r|-c|-s|-d]", handleConfig},
     };
 
     uint8_t numHandlers = sizeof(defaultHandlers) / sizeof(defaultHandlers[0]);
@@ -210,7 +210,16 @@ int processCommand(CommandType type, char* line)
     switch(type)
     {
         case BUILD:
-            return 0;
+            BuildContext* ctx = (BuildContext*)malloc(sizeof(BuildContext));
+            *ctx = PIM;
+
+            if(strcmp(argv[1], "-c") == 0)
+                *ctx = CHIP;
+            else if(strcmp(argv[1], "-p") == 0)
+                *ctx = PIM;
+
+            h = &registry->handlers[type];
+            return h->handler(ctx);
 
         case INSERT:
             return 0;
@@ -278,16 +287,18 @@ int processCommand(CommandType type, char* line)
 
         case CONFIG:
             ConfigContext* ctx = (ConfigContext*)malloc(sizeof(ConfigContext));
-            *ctx = PRINT;
+            *ctx = CONFIG;
 
             if(strcmp(argv[1], "-i") == 0)
                 *ctx = INIT;
             else if(strcmp(argv[1], "-r") == 0)
                 *ctx = RESET;
-            else if(strcmp(argv[1], "-p") == 0)
-                *ctx = PRINT;
+            else if(strcmp(argv[1], "-c") == 0)
+                *ctx = CONFIG;
             else if(strcmp(argv[1], "-s") == 0)
                 *ctx = SPECIFICS;
+            else if(strcmp(argv[1], "-d") == 0)
+                *ctx = DATASET;
 
             h = &registry->handlers[type];
             return h->handler(ctx);

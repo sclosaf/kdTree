@@ -23,12 +23,19 @@ typedef enum CommandType
     UNKNOWN
 } CommandType;
 
+typedef enum BuildContext
+{
+    CHIP,
+    PIM
+} BuildContext;
+
 typedef enum ConfigContext
 {
     INIT,
     RESET,
-    PRINT,
-    SPECIFICS
+    CONFIG,
+    SPECIFICS,
+    DATASET
 } ConfigContext;
 
 typedef struct CommandHandler
