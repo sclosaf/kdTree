@@ -124,14 +124,10 @@ TEXT_OUTPUT="${OUTPUT_FILE%.bin}.txt"
     }'
 } > "$TEXT_OUTPUT"
 
-BIN_SIZE=$(stat -c%s "$OUTPUT_FILE" 2>/dev/null)
-TXT_SIZE=$(stat -c%s "$TEXT_OUTPUT" 2>/dev/null)
-EXPECTED_SIZE=$((8 + (NUM_POINTS * DIMENSIONS * 4)))
-
 echo ""
 echo "Generation completed in ${SECONDS} seconds"
-echo "Binary file: $OUTPUT_FILE ($BIN_SIZE bytes) - ALL $NUM_POINTS points"
-echo "Text file: $TEXT_OUTPUT ($TXT_SIZE bytes) - first 100 points only"
+echo "Binary file: $OUTPUT_FILE - ALL $NUM_POINTS points"
+echo "Text file: $TEXT_OUTPUT - first 100 points only"
 echo ""
 echo "Binary format:"
 echo "  - Header: 8 bytes (4 bytes for num_points, 4 bytes for dimensions)"
