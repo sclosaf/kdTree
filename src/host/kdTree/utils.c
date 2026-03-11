@@ -84,9 +84,7 @@ uint32_t getBucket(KDNode* sketch, point* p)
             current = current->data.internal.right;
         }
         else
-        {
             current = current->data.internal.left;
-        }
 
         ++level;
     }

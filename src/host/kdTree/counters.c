@@ -70,7 +70,7 @@ bool decrementApproximateCounter(KDNode* node, size_t totalTreeSize)
     return false;
 }
 
-bool checkBalanceViolation(KDNode* node, float alpha)
+bool checkBalanceViolation(KDNode* node)
 {
     if(!node || node->type != INTERNAL)
         return false;
@@ -86,11 +86,11 @@ bool checkBalanceViolation(KDNode* node, float alpha)
 
     float ratio = (float)larger / (float)smaller;
 
-    return ratio > (1.0f + alpha);
+    return ratio > (1.0f + getConfig()->alpha);
 }
 
 void propagateCounterUpdate(KDNode* node, int delta, size_t totalTreeSize, bool lowest)
-{
+
     if(!node)
         return;
 
@@ -150,7 +150,7 @@ void initializeSubtreeCounters(KDNode* node, size_t totalTreeSize)
     node->data.internal.approximateCounter = total;
 }
 
-KDNode* findFirstImbalance(KDNode* leaf, float alpha)
+KDNode* findFirstImbalance(KDNode* leaf)
 {
     if(!leaf)
         return NULL;
@@ -159,7 +159,7 @@ KDNode* findFirstImbalance(KDNode* leaf, float alpha)
 
     while(current)
     {
-        if(current->type == INTERNAL && checkBalanceViolation(current, alpha))
+        if(current->type == INTERNAL && checkBalanceViolation(current))
             return current;
 
         current = current->parent;

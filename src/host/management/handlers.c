@@ -39,8 +39,6 @@ int handleBuild(void* context)
         default:
             return -1;
     }
-
-    return 0;
 }
 
 int handleInsert(void* context)
