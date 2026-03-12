@@ -28,7 +28,7 @@ static uint32_t getIncrementAmount(uint32_t currentValue, size_t totalTreeSize)
 {
     float prob = logf((float)totalTreeSize) / (getConfig()->beta * (float)currentValue);
 
-    return (uint32_t)ceilf(1.0f / prob);
+    return (uint32_t)(1.0f / prob);
 }
 
 bool incrementApproximateCounter(KDNode* node, size_t totalTreeSize)

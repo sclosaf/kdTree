@@ -262,6 +262,7 @@ KDTree* buildPIMKDTree(point** points, size_t n)
             freeKDTree(cacheForest);
             freeDpuAllocation(alloc);
             dpu_free(set);
+
             return NULL;
         }
 
@@ -848,4 +849,3 @@ void traverseSketchAndAssign(KDNode* sketch, point** points, size_t n, point*** 
 
     free(localCounters);
 }
-
