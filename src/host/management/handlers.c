@@ -15,10 +15,7 @@ int handleBuild(void* context)
     switch(ctx)
     {
         case CHIP:
-            if(getData()->tree)
-                freeData();
-
-            getData()->tree = buildOnChip(readDataset(), getConfig()->nPoints);
+            buildOnChip(readDataset(), getConfig()->nPoints);
 
             if(getData()->tree)
                 return 0;
@@ -26,10 +23,7 @@ int handleBuild(void* context)
                 return -1;
 
         case PIM:
-             if(getData()->tree)
-                freeData();
-
-            getData()->tree = buildPIMkdtree(readDataset(), getConfig()->nPoints);
+            buildPIMkdtree(readDataset(), getConfig()->nPoints);
 
             if(getData()->tree)
                 return 0;

@@ -50,8 +50,15 @@ KDTree* onChipBuild(point** points, size_t size)
     {
         if(groups[i]->rootNodes)
             free(groups[i]->rootNodes);
+
         free(groups[i]);
     }
+
+    if(getData()->tree)
+        freeData();
+
+    getData->tree = finalTree;
+
 
     free(groups);
 
@@ -120,9 +127,9 @@ KDTree* replicate(KDTree* original, KDGroup** groups)
     return newTree;
 }
 
-KDTree* buildPIMKDTree(point** points, size_t n)
+KDTree* buildPIMKDTree(point** points, size_t size)
 {
-    if(!points || n == 0)
+    if(!points || size == 0)
         return NULL;
 
     struct dpu_set_t set;
@@ -179,7 +186,7 @@ KDTree* buildPIMKDTree(point** points, size_t n)
     }
 
     #pragma omp parallel for
-    for(size_t i = 0; i < n; ++i)
+    for(size_t i = 0; i < size; ++i)
     {
         size_t leafIndex = getBucket(cacheForest, points[i]);
         size_t pimId = leafIndex % nPim;
@@ -330,6 +337,20 @@ KDTree* buildPIMKDTree(point** points, size_t n)
         if(subtrees[i])
             initializeSubtreeCounters(subtrees[i], n);
 
+    Data* data = getData();
+
+    data->map = malloc(sizeof(NodeLocationMap));
+    if (!data->map)
+    {
+        dpu_free(set);
+        return NULL;
+    }
+
+    if(getData()->tree)
+        freeData();
+
+    initNodeLocationMap();
+
     scatterReplica(subtrees, cacheForest, alloc);
 
     freeDpuAllocation(alloc);
@@ -350,9 +371,11 @@ KDTree* buildPIMKDTree(point** points, size_t n)
     if(result)
     {
         result->root = cacheForest;
-        result->totalPoints = n;
+        result->totalPoints = size;
         result->totalNodes = 0;
     }
+
+    getData()->tree = result;
 
     dpu_free(set);
     return result;
@@ -455,7 +478,6 @@ void copyNode(KDNode* dest, KDNode* src)
     }
 }
 
-
 KDNode* buildTreeParallel(point** points, size_t size, uint16_t depth)
 {
     if(size <= getConfig()->leafWrapThreshold)
@@ -513,7 +535,7 @@ Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
         countMatrix[i] = (uint32_t*)calloc(chunkSize, sizeof(uint32_t));
 
         size_t chunkStart = i * chunkSize;
-        size_t chunkEnd = (chunkStart + chunkSize< size) ? (chunkStart + chunkSize) : size;
+        size_t chunkEnd = (chunkStart + chunkSize < size) ? (chunkStart + chunkSize) : size;
 
         for(size_t j = chunkStart; j < chunkEnd; ++j)
         {
@@ -598,12 +620,13 @@ Bucket* sievePoints(point** points, size_t size, KDNode* sketch)
 
 void buildSketch(KDNode** root, point** samples, size_t sampleCount, uint16_t levels)
 {
+
+    *root = (KDNode*)malloc(sizeof(KDNode));
+    if(!*root)
+        return;
+
     if(levels == 0 || sampleCount <= getConfig()->leafWrapThreshold)
     {
-        *root = (KDNode*)malloc(sizeof(KDNode));
-        if(!*root)
-            return;
-
         (*root)->type = LEAF;
         (*root)->parent = NULL;
         (*root)->data.leaf.points = NULL;
@@ -611,10 +634,6 @@ void buildSketch(KDNode** root, point** samples, size_t sampleCount, uint16_t le
 
         return;
     }
-
-    *root = (KDNode*)malloc(sizeof(KDNode));
-    if(!*root)
-        return;
 
     uint8_t splitDim = findSplitDim(samples, 0, sampleCount - 1);
     float splitValue = findMedian(samples, 0, sampleCount - 1, splitDim);
@@ -665,6 +684,7 @@ void buildSketch(KDNode** root, point** samples, size_t sampleCount, uint16_t le
         free(rightSamples);
         free(*root);
         *root = NULL;
+
         return;
     }
 

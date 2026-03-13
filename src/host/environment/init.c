@@ -28,7 +28,8 @@ static Config config =
 
 static Data data =
 {
-    .tree = NULL
+    .tree = NULL,
+    .map = NULL
 };
 
 static bool configInitialized = false;
@@ -243,5 +244,13 @@ void freeData()
         free(data.tree);
 
         data.tree = NULL;
+    }
+
+    if(data.map)
+    {
+        freeNodeLocationMap();
+        free(data.map)
+
+        data.map = NULL;
     }
 }

@@ -238,6 +238,8 @@ void scatterReplica(KDNode** subtrees, KDNode* cacheForest, DpuAllocation* alloc
                 {
                     uint32_t offset = allocateOnDpu(alloc, targetDpu, subtreeSerializedSize);
 
+                    registerNodeLocation(allNodes[i], targetDpu, offset);
+
                     struct dpu_set_t dpu;
                     uint32_t currentId = 0;
                     bool success = false;

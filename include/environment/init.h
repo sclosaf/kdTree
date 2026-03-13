@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "kdTree/types.h"
+#include "kdTree/search.h"
 
 typedef struct Config
 {
@@ -21,6 +22,7 @@ typedef struct Config
 typedef struct Data
 {
     KDTree* tree;
+    NodeLocationMap* map;
 } Data;
 
 const Config* getConfig();
