@@ -424,10 +424,12 @@ KDNode** pullToCpu(KDNode* node, point** queries, uint32_t count, PushPullContex
 }
 
 
-void searchGroup0(SearchBatch* batch, KDTree* tree, KDNode*** group1Roots)
+void searchGroup0(SearchBatch* batch, KDNode*** group1Roots)
 {
     if(!batch || !tree)
         return;
+
+    KDTree* tree = getData()->tree;
 
     struct dpu_set_t set;
 
@@ -649,10 +651,12 @@ void traverseGroupWithPushPull(SearchBatch* batch, KDNode** currentNodes, uint8_
     updatePushPullContext(context);
 }
 
-SearchBatch* leafSearch(SearchBatch* batch, KDTree* tree)
+SearchBatch* leafSearch(SearchBatch* batch)
 {
-    if(!batch || !tree)
+    if(!batch)
         return NULL;
+
+    KDTree* tree = getData()->tree;
 
     PushPullContext* context = initPushPullContext();
     if(!context)
