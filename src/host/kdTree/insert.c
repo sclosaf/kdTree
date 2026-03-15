@@ -10,6 +10,147 @@
 
 #include "environment/init.h"
 
+static KDNode* insertToSkeleton(KDNode* node, Bucket* bucket, uint32_t* insertCounts, uint32_t totalTreeSize, bool* needsRebuild)
+{
+    if(!node)
+        return NULL;
+
+    if(node->type == LEAF || (node->type == INTERNAL && (node->data.internal.left == NULL || node->data.internal.right == NULL)))
+    {
+        uint32_t existingCount = getNodeSize(node);
+        uint32_t newCount = bucket->size;
+
+        point** allPoints = (point**)malloc((existingCount + newCount) * sizeof(point*));
+        if(!allPoints)
+        {
+            *needsRebuild = true;
+            return node;
+        }
+
+        uint32_t index = 0;
+        collectPointsFromSubtree(node, allPoints, &index, existingCount + newCount);
+
+        for(uint32_t i = 0; i < newCount; ++i)
+            allPoints[index++] = bucket->bucket[i];
+
+        KDTree* newSubtree = buildPIMKDTree(allPoints, index);
+        free(allPoints);
+
+        if(newSubtree)
+        {
+            freeKDTree(node);
+            return newSubtree->root;
+        }
+        else
+        {
+            *needsRebuild = true;
+            return node;
+        }
+    }
+
+    uint32_t leftSize = node->data.internal.left ? getNodeSize(node->data.internal.left) : 0;
+    uint32_t rightSize = node->data.internal.right ? getNodeSize(node->data.internal.right) : 0;
+
+    uint32_t leftInsertCount = 0, rightInsertCount = 0;
+
+    for(uint32_t i = 0; i < bucket->size; ++i)
+        if(bucket->bucket[i]->coords[node->data.internal.splitDim] < node->data.internal.splitValue)
+            ++leftInsertCount;
+        else
+            ++rightInsertCount;
+
+    Bucket leftBucket, rightBucket;
+
+    if(leftInsertCount > 0)
+    {
+        leftBucket.bucket = (point**)malloc(leftInsertCount * sizeof(point*));
+        leftBucket.size = leftInsertCount;
+
+        uint32_t leftIndex = 0;
+        for(uint32_t i = 0; i < bucket->size; ++i)
+            if(bucket->bucket[i]->coords[node->data.internal.splitDim] < node->data.internal.splitValue)
+                leftBucket.bucket[leftIndex++] = bucket->bucket[i];
+    }
+
+    if(rightInsertCount > 0)
+    {
+        rightBucket.bucket = (point**)malloc(rightInsertCount * sizeof(point*));
+        rightBucket.size = rightInsertCount;
+
+        uint32_t rightIndex = 0;
+        for(uint32_t i = 0; i < bucket->size; ++i)
+            if(bucket->bucket[i]->coords[node->data.internal.splitDim] >= node->data.internal.splitValue)
+                rightBucket.bucket[rightIndex++] = bucket->bucket[i];
+    }
+
+    uint32_t newLeftSize = leftSize + leftInsertCount;
+    uint32_t newRightSize = rightSize + rightInsertCount;
+    uint32_t larger = (newLeftSize > newRightSize) ? newLeftSize : newRightSize;
+    uint32_t smaller = (newLeftSize > newRightSize) ? newRightSize : newLeftSize;
+    float ratio = (smaller > 0) ? (float)larger / (float)smaller : 1.0f;
+
+    if(ratio > (1.0f + getConfig()->alpha))
+    {
+        *needsRebuild = true;
+
+        uint32_t totalPoints = leftSize + rightSize + bucket->size;
+        point** allPoints = (point**)malloc(totalPoints * sizeof(point*));
+
+        uint32_t index = 0;
+        collectPointsFromSubtree(node, allPoints, &index, totalPoints);
+
+        for(uint32_t i = 0; i < bucket->size; ++i)
+            allPoints[index++] = bucket->bucket[i];
+
+        KDTree* rebuilt = buildPIMKDTree(allPoints, totalPoints);
+        free(allPoints);
+
+        free(leftBucket.bucket);
+        free(rightBucket.bucket);
+
+        if(rebuilt)
+        {
+            freeKDTree(node);
+            return rebuilt->root;
+        }
+
+        return node;
+    }
+
+    if(leftInsertCount > 0 && node->data.internal.left)
+    {
+        bool leftRebuild = false;
+        node->data.internal.left = insertToSkeleton(node->data.internal.left, &leftBucket, insertCounts, totalTreeSize, &leftRebuild);
+
+        if(leftRebuild)
+            *needsRebuild = true;
+
+        free(leftBucket.bucket);
+    }
+
+    if(rightInsertCount > 0 && node->data.internal.right)
+    {
+        bool rightRebuild = false;
+        node->data.internal.right = insertToSkeleton(node->data.internal.right, &rightBucket, insertCounts, totalTreeSize, &rightRebuild);
+
+        if(rightRebuild)
+            *needsRebuild = true;
+        free(rightBucket.bucket);
+    }
+
+    if(!(*needsRebuild))
+    {
+        uint32_t leftSizeNew = node->data.internal.left ?  getNodeSize(node->data.internal.left) : 0;
+        uint32_t rightSizeNew = node->data.internal.right ? getNodeSize(node->data.internal.right) : 0;
+
+        int delta = (leftSizeNew + rightSizeNew) - (leftSize + rightSize);
+
+        propagateCounterUpdate(node, delta, totalTreeSize + (delta > 0 ? delta : 0), false);
+    }
+
+    return node;
+}
+
 void updateParentPointers(KDNode* node, KDNode* newParent)
 {
     if(!node)
@@ -139,7 +280,7 @@ SearchBatch* leafSearchForInsert(SearchBatch* batch, KDNode*** imbalancedNodes, 
     return batch;
 }
 
-static void collectPointsFromSubtree(KDNode* node, point*** collector, size_t* count, size_t* capacity)
+void collectPointsFromSubtree(KDNode* node, point*** collector, size_t* count, size_t* capacity)
 {
     if(!node)
         return;
@@ -260,15 +401,28 @@ bool batchInsert(point** points, size_t batchSize, size_t totalTreeSize)
     if(!points || batchSize == 0)
         return false;
 
+    KDTree* tree = getData()->tree;
+
+    KDNode* skeleton = tree->root;
+    Bucket* buckets = sievePoints(points, batchSize, skeleton);
+    if(!buckets)
+        return false;
+
+    uint32_t numBuckets = 1 << getConfig()->sketchHeight;
+
     SearchBatch* searchBatch = initSearchBatch(points, batchSize);
     if(!searchBatch)
+    {
+        free(buckets);
         return false;
+    }
 
     KDNode** imbalancedNodes = NULL;
     searchBatch = leafSearchForInsert(searchBatch, &imbalancedNodes, totalTreeSize);
     if(!searchBatch)
     {
         freeSearchBatch(searchBatch);
+        free(buckets);
         return false;
     }
 
@@ -288,8 +442,29 @@ bool batchInsert(point** points, size_t batchSize, size_t totalTreeSize)
         {
             free(imbalancedNodes);
             freeSearchBatch(searchBatch);
+            free(buckets);
             return false;
         }
+    }
+
+    uint32_t* insertCounts = (uint32_t*)calloc(numBuckets, sizeof(uint32_t));
+    bool globalRebuild = false;
+
+    for(uint32_t i = 0; i < numBuckets; i++)
+    {
+        if(buckets[i].size == 0)
+            continue;
+
+        bool localRebuild = false;
+        KDNode* updated = insertToSkeleton(skeleton, &buckets[i], insertCounts, totalTreeSize, &localRebuild);
+
+        if(localRebuild)
+        {
+            globalRebuild = true;
+            skeleton = updated;
+        }
+
+        insertCounts[i] += buckets[i].size;
     }
 
     for(size_t i = 0; i < batchSize; ++i)
@@ -327,14 +502,18 @@ bool batchInsert(point** points, size_t batchSize, size_t totalTreeSize)
                     ++leaf->data.leaf.pointsCount;
 
                     if(leaf->parent)
-                        propagateCounterUpdate(leaf->parent, 1, totalTreeSize + batchSize, false);
+                        propagateCounterUpdate(leaf->parent, 1, totalTreeSize + batchSize, true);
                 }
             }
         }
     }
 
-    getData()->tree->totalPoints += batchSize;
+    tree->totalPoints += batchSize;
+    if(globalRebuild && skeleton != tree->root)
+        tree->root = skeleton;
 
+    free(buckets);
+    free(insertCounts);
     free(imbalancedNodes);
     freeSearchBatch(searchBatch);
 
